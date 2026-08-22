@@ -1,6 +1,6 @@
 ---
 title: Sheets Diff Tool — v1.1.0 Migration Plan
-status: migration plan — closes the gap between shipped `SheetsDiff.gs` and the plan's 2026-08-22 revision
+status: **EXECUTED — Stage 0, Track B and Track A are complete; §5 (Step 11) is not.** Retire this document once Step 11 passes; it is a record, not a reference. See the note under §0
 date: 2026-08-22
 target: Google Apps Script (V8), thirteen-file project, no external libraries
 migrates: SheetsDiff.gs (unversioned, 3,524 lines, one file) → v1.1.0
@@ -20,6 +20,37 @@ is local to the shipped build. **Doc §n** refers to *Sheets Diff Tool -
 Implementation Documentation.md* — **doc §11 is the gap analysis this plan acts
 on** and is not restated here. **Fixture doc §n** refers to *Test Fixture
 Generator - Implementation Documentation.md*.
+
+---
+
+## 0. Execution note — 2026-08-22
+
+**Everything below was carried out except §5.** What actually happened, against
+what this document asked for:
+
+| | Asked for | Done |
+|---|---|---|
+| §1.1 | `git init`, baseline commit, `clasp clone` | git yes, baseline at the commit before the migration. **`clasp clone` not done** — no Apps Script project has been touched from here |
+| §1.2 | Capture the golden CSV and summary | **Not done as a file pair.** No Apps Script project existed to run the stubbed dry run against at Stage 0. Track B's oracle was the 74-test suite and three mechanical checks instead; §1.2's *purpose* — test 36 — is discharged as a unit assertion, and the file-level comparison moves to Step 11. **This is the one place the plan's oracle was weakened, and it is recorded rather than glossed** |
+| §1.3 | Runner asserts declared totals, goes red at 33/38 | Done. It went red, as intended, before any feature work |
+| B1–B6 | Rename, split, per-module tests, Script Properties, `VERSION`, commits | Done. Twenty-three `.gs` files plus `appsscript.json`. Purity grep empty, no duplicate global, every top-level statement a declaration |
+| A1–A8 | `SECTION_2_TYPES`, `sectionOf`, two-block `toCsv`, `DERIVED_VALUE` + the noise split in one commit, the summary, four restated tests, tests 34–38, five sabotage rows | Done. **79 tests pass; 20 sabotage rows, 20 caught, 0 decorative, 8 still caught by a single test each** |
+| §4 | Documentation | Done. *Sheets Diff Tool - Implementation Documentation.md* is rewritten against v1.1.0; its §11 is a conformance note |
+| §5 | Step 11 | **Not done.** Needs a live spreadsheet. Doc §1.3 is the procedure and doc §6.4 the checklist |
+
+Three things were found in execution that this plan did not anticipate, and all
+three are in the implementation documentation rather than here:
+
+1. **`verifyReferenceForms` called the harness's `pad_`.** Harmless in one file;
+   impossible after the split, since production code cannot reach into a test
+   file. It uses `padR_` now — an identical body, so the output is unchanged.
+2. **The "one row map per formula" sabotage row fails 2 tests, not the 10 the
+   v1.0.0 matrix recorded.** Only a formula holding two references into two tabs
+   whose maps *disagree* can see it. Doc §6.3 and §10 record it as a real
+   thinness in the fixtures rather than as a migration regression.
+3. **`t_opts` was added to the harness.** Three tests carried a six-key opts
+   literal each, and a literal that omits `derivedCap` reads as *no cap* — a
+   different behaviour from the default, silently.
 
 ---
 

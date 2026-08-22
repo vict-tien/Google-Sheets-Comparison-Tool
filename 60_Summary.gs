@@ -446,7 +446,8 @@ function summaryNotes_(result, t) {
   if (relocated === 0 && moved > 0 && absRefs > 0) {
     out.push('⚠ 0 formulas realigned while ' + moved + ' row' +
              (moved === 1 ? '' : 's') + ' moved, yet ' + absRefs +
-             ' formula' + (absRefs === 1 ? '' : 's') + ' hold absolute row');
+             ' formula' + (absRefs === 1 ? ' holds' : 's hold') +
+             ' absolute row');
     out.push('  references. Step 4 may be matching nothing: verify the R1C1 ' +
              'reference forms against');
     out.push('  plan §1.2a before trusting the FORMULA rows in this run.');
