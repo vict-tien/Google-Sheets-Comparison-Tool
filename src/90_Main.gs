@@ -8,7 +8,7 @@
  * enforceable by one grep over the file tree rather than by a banner comment
  * and a convention:
  *
- *     grep -l 'SpreadsheetApp\|DriveApp\|PropertiesService\|Utilities\|Session\|MimeType' *.gs
+ *     grep -l 'SpreadsheetApp\|DriveApp\|PropertiesService\|Utilities\|Session\|MimeType' src/*.gs
  *
  * must name this file and no other. The property it protects is that
  * runTests() raises NO AUTHORISATION PROMPT — which is what lets 79 tests run

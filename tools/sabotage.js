@@ -16,13 +16,15 @@
 //
 // Run it the same way as runner.js:
 //   $env:ELECTRON_RUN_AS_NODE = "1"
-//   & "$env:LOCALAPPDATA\Programs\Microsoft VS Code\Code.exe" sabotage.js out.txt
+//   & "$env:LOCALAPPDATA\Programs\Microsoft VS Code\Code.exe" tools/sabotage.js sabotage.txt
+//
+// The source lives in src/ and this file in tools/, so the directory is
+// resolved from __dirname rather than from the working directory.
 const fs = require('fs'), vm = require('vm'), path = require('path');
 
-const dir = __dirname;
+const dir = path.join(__dirname, '..', 'src');
 const files = fs.readdirSync(dir)
   .filter(function (f) { return /\.gs$/.test(f); })
-  .filter(function (f) { return f !== 'GenerateTestWorkbooks.gs'; })
   .sort();
 
 let BASE = '';

@@ -5,7 +5,7 @@ date: 2026-08-22
 target: Google Apps Script (V8), thirteen-file project, no external libraries
 migrates: SheetsDiff.gs (unversioned, 3,524 lines, one file) → v1.1.0
 towards: Google Sheets Difference Comparison Tool Implementation Plan.md, revision 2026-08-22
-gap_analysis: Sheets Diff Tool - Implementation Documentation.md §11
+gap_analysis: docs/implementation.md §11
 audience: coding agent, or whoever continues the diff tool build
 ---
 
@@ -16,10 +16,16 @@ audience: coding agent, or whoever continues the diff tool build
 Plan.md*, revision 2026-08-22 — its numbered sections and build steps. **Rule n**
 is a row in plan §0.1, which now holds fifteen. **Test n** is a row in the plan's
 acceptance-test table, which now holds thirty-eight; a quoted id (**Test '4a'**)
-is local to the shipped build. **Doc §n** refers to *Sheets Diff Tool -
-Implementation Documentation.md* — **doc §11 is the gap analysis this plan acts
-on** and is not restated here. **Fixture doc §n** refers to *Test Fixture
-Generator - Implementation Documentation.md*.
+is local to the shipped build. **Doc §n** refers to
+[`implementation.md`](implementation.md) — **doc §11 is the gap analysis this
+plan acts on** and is not restated here. **Fixture doc §n** refers to
+[`fixture-generator.md`](fixture-generator.md).
+
+**This document is a record, not a reference.** It describes a migration that has
+been executed; the paths in its body are the ones that were current while it ran,
+before the repository was reorganised into `src/`, `tools/`, `fixtures/` and
+`docs/`. Read [`implementation.md`](implementation.md) for how the code is laid
+out and run today.
 
 ---
 
@@ -577,6 +583,6 @@ already located:
 A 3¾ and is where the acceptance tests do their work; documentation and Step 11
 are the remaining 1½.
 
-Commit at each row. Twenty-three `.gs` files — thirteen production, two harness,
-eight test — and a working suite make a regression bisect in minutes; one
+Commit at each row. Twenty-four `.gs` files — thirteen production, nine test, two
+harness — and a working suite make a regression bisect in minutes; one
 squashed commit at the end throws that away for nothing.

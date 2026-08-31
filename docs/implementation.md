@@ -3,11 +3,11 @@ title: Sheets Diff Tool — Implementation Documentation
 status: implementation documentation — describes shipped code. Steps 1–10 complete against the plan's 2026-08-22 revision, its current one; **Step 11, the live run, is still not done (§1.3)**
 date: 2026-08-08
 revised: 2026-08-22 — **v1.1.0.** Both outstanding plan revisions are now implemented: `DERIVED_VALUE` and the two-section CSV (the plan's 2026-08-19 revision), and the multi-file layout, Script Properties config and `VERSION` stamping (2026-08-22). §11 is a conformance note rather than a gap analysis. §0, §1.1–§1.4, §2, §5.2, §5.4, §6.1–§6.4, §7, §8, §9 and §10 describe the new behaviour
-target: Google Apps Script (V8), twenty-three `.gs` files plus a checked-in manifest, no external libraries
-documents: v1.1.0 — `00_Config.gs` … `99_TestRunner.gs`, `VERSION = '1.1.0'` in `00_Config.gs`
-built_from: Google Sheets Difference Comparison Tool Implementation Plan.md, revision 2026-08-22
+target: Google Apps Script (V8), twenty-four `.gs` files in `src/` plus a checked-in manifest, no external libraries
+documents: v1.1.0 — `src/00_Config.gs` … `src/99_TestRunner.gs`, `VERSION = '1.1.0'` in `src/00_Config.gs`
+built_from: Google Sheets Difference Comparison Tool Implementation Plan.md, revision 2026-08-22 — **not checked in**; the plan is the specification this build was measured against and lives outside the repository
 measured_against: Google Sheets Difference Comparison Tool Implementation Plan.md, revision 2026-08-22
-migration: Sheets Diff Tool - v1.1.0 Migration Plan.md — Stage 0, Track B and Track A complete; only its §5, the Step 11 live run, remains
+migration: docs/migration-v1.1.0.md — Stage 0, Track B and Track A complete; only its §5, the Step 11 live run, remains
 audience: whoever runs, verifies or continues the diff tool build
 ---
 
@@ -15,12 +15,18 @@ audience: whoever runs, verifies or continues the diff tool build
 
 **Reference conventions.** **§n** points within this document. **Plan §n** and
 **Step n** refer to *Google Sheets Difference Comparison Tool Implementation
-Plan.md*, revision 2026-08-22. **Test n** is a row in that plan's
-acceptance-test table, which runs to 38; a quoted id (**Test '4a'**) is local to
-this build and has no plan counterpart. **Fixture doc §n** refers to *Test
-Fixture Generator - Implementation Documentation.md*. **Migration §n** refers to
-*Sheets Diff Tool - v1.1.0 Migration Plan.md*. Types in `CAPITALS` are the
-output taxonomy; **rule n** is a row in plan §0.1, which holds fifteen.
+Plan.md*, revision 2026-08-22 — the specification, which is **not checked in**.
+**Test n** is a row in that plan's acceptance-test table, which runs to 38; a
+quoted id (**Test '4a'**) is local to this build and has no plan counterpart.
+**Fixture doc §n** refers to [`fixture-generator.md`](fixture-generator.md).
+**Migration §n** refers to [`migration-v1.1.0.md`](migration-v1.1.0.md). Types in
+`CAPITALS` are the output taxonomy; **rule n** is a row in plan §0.1, which holds
+fifteen.
+
+**Paths.** Source is in `src/`, the three harness scripts in `tools/`, these
+documents in `docs/`. A bare `00_Config.gs` below means `src/00_Config.gs`; the
+harnesses are always written with their `tools/` prefix, because that is how they
+are invoked.
 
 ---
 
@@ -31,8 +37,8 @@ Given two Google Spreadsheet URLs the tool compares every matching tab, writes
 to section 1 of a CSV in Drive, writes **every recalculated cell** to section 2
 of the same file, and logs a summary.
 
-The project is twenty-three `.gs` files with numeric load-order prefixes: thirteen
-production, two harness, eight test. `00_Config.gs` loads first and holds every
+The project is twenty-four `.gs` files with numeric load-order prefixes: thirteen
+production, nine test, two harness. `00_Config.gs` loads first and holds every
 tunable; `90_Main.gs` loads last and is **the only file that touches a Google
 service**. Everything between is pure, which is what lets all 79 tests run with
 no spreadsheet and no authorisation prompt.
@@ -169,11 +175,26 @@ formality.
 
 ### 1.1 In Apps Script
 
-1. `clasp clone` into this directory, or script.google.com → **New project**
-   (standalone, not container-bound) and paste all twenty-three `.gs` files in.
-   Runtime must be V8 — the code uses `const`, `let`, `Map`, `Set`,
-   `Int32Array`.
-2. **Check `appsscript.json` went with them.** It is checked in, and it is what
+1. Create the script project — script.google.com → **New project**, standalone,
+   **not** container-bound. Then either push with `clasp`, or paste all
+   twenty-four `.gs` files in `src/` in by hand. Runtime must be V8 — the code uses
+   `const`, `let`, `Map`, `Set`, `Int32Array`.
+
+   For `clasp`, write a `.clasp.json` at the repository root. It is **not**
+   checked in, because it holds a script id:
+
+   ```json
+   {
+     "scriptId": "<your script id>",
+     "rootDir": "src"
+   }
+   ```
+
+   `rootDir` is the load-bearing line. Everything Apps Script sees lives in
+   `src/`; `tools/` and `docs/` must not be pushed, and without `rootDir` they
+   would be. Copy `.clasp.json.example` and fill the id in.
+2. **Check `appsscript.json` went with them.** It is checked in, at
+   `src/appsscript.json`, and it is what
    makes the read-only guarantee a platform constraint rather than a promise
    this code makes about itself:
 
@@ -261,22 +282,37 @@ key that quietly produces the output the revision exists to prevent.
 
 ### 1.2 Running the suite outside Apps Script
 
-The suite is plain ES2015+ with no platform dependency. This machine has no
-standalone Node, Bun or Deno, but VS Code ships an Electron that will act as one.
-Three checked-in scripts drive it, and all three take the same invocation:
+The suite is plain ES2015+ with no platform dependency, so any V8 will do. With
+Node installed:
+
+```bash
+node tools/runner.js   out.txt
+node tools/sabotage.js sabotage.txt
+node tools/dryrun.js   dryrun.txt
+```
+
+The machine this was built on has no standalone Node, Bun or Deno, but VS Code
+ships an Electron that will act as one — which is what the two traps below are
+about:
 
 ```powershell
 $env:ELECTRON_RUN_AS_NODE = "1"
-& "$env:LOCALAPPDATA\Programs\Microsoft VS Code\Code.exe" runner.js out.txt
+& "$env:LOCALAPPDATA\Programs\Microsoft VS Code\Code.exe" tools/runner.js out.txt
 ```
+
+Run from the repository root either way. Each script resolves `src/` from its own
+`__dirname`, so the source is found from any working directory, but the output
+file is written relative to the **working directory** and the three names are
+gitignored at the root.
 
 | Script | Does | Read it for |
 |---|---|---|
-| `runner.js` | Concatenates every `.gs` in **name order** and calls `runTests()` | The suite |
-| `sabotage.js` | Applies each of twenty mutations to that source in a fresh `vm` and reports which tests go red | §6.3 — **what the green means** |
-| `dryrun.js` | Stubs all six Google globals and drives `runWith()` end to end | §1.4 — the scope boundary, mechanically |
+| `tools/runner.js` | Concatenates every `.gs` in **name order** and calls `runTests()` | The suite |
+| `tools/sabotage.js` | Applies each of twenty mutations to that source in a fresh `vm` and reports which tests go red | §6.3 — **what the green means** |
+| `tools/dryrun.js` | Stubs all six Google globals and drives `runWith()` end to end | §1.4 — the scope boundary, mechanically |
 
-All three concatenate in name order, which is the order Apps Script loads in —
+All three read `src/`, skip `GenerateTestWorkbooks.gs`, and concatenate in name
+order, which is the order Apps Script loads in —
 that is what the numeric prefixes are for. Running here does not prove the load
 order is right *in Apps Script*; it proves it is self-consistent, and it catches
 a duplicate global immediately, which is the failure mode the split introduces.
@@ -329,13 +365,13 @@ already located:
 
 | Verified | How | Covers |
 |---|---|---|
-| All **38** plan acceptance tests + 41 local tests | `runner.js` in a V8 `vm` | Steps 1–7 and 10 in full, `readTab`'s contract, 9's pure half |
-| **What those 79 passes are worth** | `sabotage.js` — twenty mutations, each in a fresh `vm` | §6.3. Twenty caught, none decorative, eight still caught by a single test each |
-| `runWith()`'s full call path, `readTab`, `toCsv`, `buildSummary` | `dryrun.js`: all six Google globals stubbed; fixture `TabData` served through fake `getDataRange()` objects | Method names, call order, the Drive write, the filename, the summary text |
+| All **38** plan acceptance tests + 41 local tests | `tools/runner.js` in a V8 `vm` | Steps 1–7 and 10 in full, `readTab`'s contract, 9's pure half |
+| **What those 79 passes are worth** | `tools/sabotage.js` — twenty mutations, each in a fresh `vm` | §6.3. Twenty caught, none decorative, eight still caught by a single test each |
+| `runWith()`'s full call path, `readTab`, `toCsv`, `buildSummary` | `tools/dryrun.js`: all six Google globals stubbed; fixture `TabData` served through fake `getDataRange()` objects | Method names, call order, the Drive write, the filename, the summary text |
 | **Nothing writes to a source spreadsheet** | Stub sheets are `Proxy` objects that **throw on any method but** `getName` and `getDataRange`. The dry run completes, 13 checks green | The §0 scope boundary, mechanically |
 | Exactly one Drive write per run | Counted in the stub: 1 | §1.1 |
-| `run()` refuses rather than opening `undefined` when the Script Properties are unset | `dryrun.js` runs it with no properties first and asserts the throw | §1.1 step 4 |
-| The CSV reaches Drive and **never** the log | `dryrun.js` asserts the logged text holds no data rows | §7.4 |
+| `run()` refuses rather than opening `undefined` when the Script Properties are unset | `tools/dryrun.js` runs it with no properties first and asserts the throw | §1.1 step 4 |
+| The CSV reaches Drive and **never** the log | `tools/dryrun.js` asserts the logged text holds no data rows | §7.4 |
 | Purity, no duplicate global, no computed top-level constant | Three greps over the file tree | §2, §9 |
 
 | **Not** verified | Consequence |
@@ -345,7 +381,7 @@ already located:
 | Apps Script's own parser and quota behaviour | Six globals were stubbed, and the suite runs in Electron's V8 rather than Apps Script's. Running `runTests()` once in the editor closes the parser half |
 | Real runtime against a large workbook | The 6-minute ceiling is untested |
 | `Utilities.sleep` pacing above 10 tabs | Dry-run fixtures have 4 tabs; the branch never fired |
-| That `clasp push` uploads all twenty-four files in the right load order | The prefixes are what Apps Script sorts on, but nobody has pushed this layout |
+| That `clasp push --rootDir src` uploads all twenty-five files in the right load order | The prefixes are what Apps Script sorts on, but nobody has pushed this layout |
 
 ---
 
@@ -940,7 +976,7 @@ count short of 41.
 specifying the Step 11 live run as their verification instead. Thirteen local
 tests cover them anyway ('4z', '8a'–'8b', '10a'–'10i'), because Step 11 has still
 not been run and shipping three unexercised steps on the strength of a procedure
-nobody has followed is not a verification. `dryrun.js` (§1.4) covers the rest of
+nobody has followed is not a verification. `tools/dryrun.js` (§1.4) covers the rest of
 `90_Main.gs` outside the suite.
 
 ### 6.2 Coverage by module
@@ -1017,7 +1053,7 @@ produce (§4.4).
 
 Each row is a mutation applied to the concatenated source in a fresh `vm`
 context. **A green suite proves nothing on its own; this table is what the green
-means.** It is `sabotage.js` (§1.2), so it is re-runnable, and the numbers below
+means.** It is `tools/sabotage.js` (§1.2), so it is re-runnable, and the numbers below
 are what it printed — not what anyone expected it to print.
 
 **Re-run it at the end of any refactor, not just the suite.** A green suite after
@@ -1112,7 +1148,7 @@ check:
 | `getFormulasR1C1()`'s actual output | Plan §1.2a. `verifyReferenceForms` can now check it, but has not been run (§4.9) |
 | Whether `#REF!` survives into R1C1 | Plan §1.2b. Diagnostic only while `errorState` reads the A1 form |
 | `runWith()` against a live spreadsheet | Step 11. The call path is covered by the stubbed dry run (§1.4); the *platform* is not |
-| That `clasp push` uploads all twenty-four files, in load order | The numeric prefixes are what Apps Script sorts on, but nobody has pushed this layout. `runner.js` proves the concatenation is self-consistent, not that Apps Script produces the same one |
+| That `clasp push --rootDir src` uploads all twenty-five files, in load order | The numeric prefixes are what Apps Script sorts on, but nobody has pushed this layout. `tools/runner.js` proves the concatenation is self-consistent, not that Apps Script produces the same one |
 | `Utilities.sleep` pacing above 10 tabs | Dry-run fixtures have 4 tabs, so the branch never fired |
 | `verifyReferenceForms` beyond one dry run | Deliberate — it reports what the real API returns, which is exactly what a fixture cannot supply |
 | Apps Script's own parser and quota behaviour | The suite runs in V8 via Electron; five globals were stubbed |
@@ -1387,7 +1423,7 @@ insertion and a deletion cancel, because `0 rows in <tab>` would hide both.
 
 **Every harness global is prefixed `t_` (functions) or `T_` (state), and the
 prefix is load-bearing.** In one file a collision between a test helper and a
-production function is a visible redeclaration error. Across twenty-three files
+production function is a visible redeclaration error. Across twenty-four files
 it is a **silent last-one-wins overwrite with no error at all**, and the symptom
 is a test passing against the wrong helper. `sheet`, `fixture` and `workbook`
 were the live hazards — all three are plausible production names.
@@ -1438,7 +1474,7 @@ defaults without failing.
 
 | Symptom | Likely cause |
 |---|---|
-| Apps Script asks for authorisation on `runTests()` | A Google-service call has been added outside `90_Main.gs`. `grep -l 'SpreadsheetApp\|DriveApp\|PropertiesService\|Utilities\|Session\|MimeType' *.gs` names the file |
+| Apps Script asks for authorisation on `runTests()` | A Google-service call has been added outside `90_Main.gs`. `grep -l 'SpreadsheetApp\|DriveApp\|PropertiesService\|Utilities\|Session\|MimeType' src/*.gs` names the file |
 | `FAIL — plan acceptance tests: missing …` with every listed test also absent from the output | A `.test.gs` suite is not registered in `t_registerAll_`. The local count will be short too (§6.1) |
 | A test fails against a helper that looks correct | A harness global lost its `t_` prefix and is now shadowed by, or shadowing, a production function. Across files this is silent — check for a duplicate declaration (§9) |
 | The local runner prints nothing, exit 0 | `console.log` is discarded under `ELECTRON_RUN_AS_NODE` (§1.2) |
@@ -1505,7 +1541,7 @@ defaults without failing.
 5. Assert with `t_assertCount` **and** `t_assertTotal`. A count alone permits
    extra rows to appear unnoticed, which is how a regression that *adds* output
    stays green — and turning section 2 on is exactly such a change.
-6. Add the line the test protects to `sabotage.js` and confirm the test fails. A
+6. Add the line the test protects to `tools/sabotage.js` and confirm the test fails. A
    test that survives its own sabotage is decorative (§6.3).
 
 **To add a change type:**
@@ -1548,7 +1584,7 @@ defaults without failing.
    Google service breaks `runTests()`'s no-authorisation property (§0), and no
    test will catch it — the suite never runs in Apps Script. The grep in §2 is
    the whole defence; run it.
-2. Nothing may call a setter on either source spreadsheet. `dryrun.js` (§1.4)
+2. Nothing may call a setter on either source spreadsheet. `tools/dryrun.js` (§1.4)
    enforces this with throwing proxies; re-run it after any change here.
 3. A new scope means editing `appsscript.json`, which is the one place a reviewer
    can see the tool's reach. Widening `spreadsheets.readonly` to `spreadsheets`
@@ -1613,7 +1649,7 @@ defaults without failing.
 | `INDIRECT`/`OFFSET` cannot be resolved; `VOLATILE_VALUE` is silent when the value happens not to change | Inherited from the plan | Plan §0.3 names it a known limit and forbids fixing it |
 | `alignRows` calls `hashGrid` internally, recomputing hashes its caller already built | This build | ~2× redundant hashing; negligible at these sizes, worth folding into the signature if a large workbook shows up in a profile |
 | Suite validated in V8 via VS Code's Electron, not in Apps Script | This build | The code uses no platform API outside `90_Main.gs`, so the risk is confined to Apps Script's own parser and to its file load order; running `runTests()` once in the editor closes both |
-| Nobody has run `clasp push` on this layout | This build | The numeric prefixes are what Apps Script sorts on, and `runner.js` proves the concatenation is self-consistent — not that Apps Script produces the same one |
+| Nobody has run `clasp push` on this layout | This build | The numeric prefixes are what Apps Script sorts on, and `tools/runner.js` proves the concatenation is self-consistent — not that Apps Script produces the same one |
 | Array formulas, merged cells, row moves, charts, formatting | Non-goals in the plan | Not defects — see the plan's Non-goals table |
 
 ---

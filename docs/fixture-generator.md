@@ -4,19 +4,24 @@ status: implementation documentation — describes shipped code
 date: 2026-08-07
 revised: 2026-08-22 — realigned to the plan's 2026-08-19 (two-section CSV) and 2026-08-22 (multi-file, Script Properties) revisions; adds the `Cascade` tab for test 38
 target: Google Apps Script (V8), single `.gs` file, no external libraries
-documents: GenerateTestWorkbooks.gs
-built_from: Google Sheets Difference Comparison Tool Implementation Plan.md
+documents: src/GenerateTestWorkbooks.gs
+built_from: Google Sheets Difference Comparison Tool Implementation Plan.md — **not checked in**
 audience: whoever runs, reads or extends the fixture generator
 ---
 
 # Test Fixture Generator — Implementation Documentation
 
-Documentation for **`GenerateTestWorkbooks.gs`**, the Apps Script that builds the
-two spreadsheets used to validate the Google Sheets diff tool end to end.
+Documentation for **`src/GenerateTestWorkbooks.gs`**, the Apps Script that builds
+the two spreadsheets used to validate the Google Sheets diff tool end to end. It
+is a **separate script project** from the diff tool — it writes spreadsheets,
+which the diff tool must never be able to do (see
+[`implementation.md`](implementation.md) §0). The two are versioned together in
+one repository and deployed apart.
 
 **Reference conventions.** **§n** points within this document. **Plan §n** and
 **Step n** refer to *Google Sheets Difference Comparison Tool Implementation
-Plan.md* — its numbered sections and its build steps respectively. **Test n** is
+Plan.md* — its numbered sections and its build steps respectively; the plan is
+the specification and is **not checked in**. **Test n** is
 a row in that plan's "Verification — acceptance tests" table, and **rule n** a
 row in its §0.1 table of fifteen rules. Change types in `CAPITALS` are the diff
 tool's output taxonomy.
@@ -58,8 +63,10 @@ procedure, not something the generator drives.
 
 ## 1. Setup and use
 
-1. script.google.com → **New project** (standalone, not container-bound). Paste
-   the file in. Runtime must be V8.
+1. script.google.com → **New project** (standalone, not container-bound) — a
+   **second** project, separate from the diff tool's, for the scope reason in
+   §1.1. Paste `fixtures/GenerateTestWorkbooks.gs` in, or push it with a
+   `.clasp.json` whose `rootDir` is `fixtures`. Runtime must be V8.
 2. Set `CONFIG.FOLDER_ID` to the destination folder — a bare ID or a full folder
    URL, both work. Leave it `''` to create (or reuse) `CONFIG.FOLDER_NAME` in the
    root of My Drive.
@@ -105,9 +112,21 @@ not.
 
 | Plan requirement | Applies to the generator? |
 |---|---|
-| `clasp` clone into the same git repo (plan §1.1d) | **Yes.** A sibling script project. The fixture set is now versioned, and §6's counts are only checkable if you can see what changed between two runs that behaved differently |
+| `clasp` clone into the same git repo (plan §1.1d) | **Yes.** A sibling script project, in `fixtures/`. The fixture set is now versioned, and §6's counts are only checkable if you can see what changed between two runs that behaved differently |
 | Explicit `oauthScopes` in `appsscript.json` (plan §1.1c) | **Yes**, and they are the opposite of the tool's. See below |
 | Twelve-file layout with numeric prefixes (plan §1.1) | **No.** See §10 |
+
+**`fixtures/` is a directory rather than a file beside the tool**, and the
+separation is load-bearing rather than tidiness. `clasp` pushes a whole
+`rootDir`: with the generator sitting in `src/` alongside the tool, one
+`clasp push` would upload a script full of `SpreadsheetApp` **writes** into the
+project whose manifest promises `spreadsheets.readonly`, and the platform would
+then have to grant the union of both scope sets. The two directories are two
+`rootDir` values and therefore two projects, which is what keeps the promise
+enforceable.
+
+`fixtures/appsscript.json` is checked in and holds exactly this — verbatim, and
+deliberately the opposite of `src/appsscript.json`:
 
 ```json
 {

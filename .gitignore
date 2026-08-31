@@ -4,3 +4,18 @@
 out.txt
 sabotage.txt
 dryrun.txt
+
+# clasp. Holds a script id, which is deployment configuration and not source.
+# Copy .clasp.json.example and fill it in; see README "Install".
+.clasp.json
+.clasprc.json
+
+# Local editor and OS noise.
+.vscode/
+.idea/
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Claude Code local settings — machine-specific, not shared.
+.claude/settings.local.json

@@ -23,12 +23,18 @@
 // WHAT IT DOES NOT PROVE: anything about the real API. What getFormulasR1C1()
 // returns is plan §1.2 and is answered only by verifyReferenceForms against a
 // real file. Six globals stubbed here is six assumptions, not six facts.
+//
+// Run it the same way as runner.js:
+//   $env:ELECTRON_RUN_AS_NODE = "1"
+//   & "$env:LOCALAPPDATA\Programs\Microsoft VS Code\Code.exe" tools/dryrun.js dryrun.txt
+//
+// The source lives in src/ and this file in tools/, so the directory is
+// resolved from __dirname rather than from the working directory.
 const fs = require('fs'), vm = require('vm'), path = require('path');
 
-const dir = __dirname;
+const dir = path.join(__dirname, '..', 'src');
 const files = fs.readdirSync(dir)
   .filter(function (f) { return /\.gs$/.test(f); })
-  .filter(function (f) { return f !== 'GenerateTestWorkbooks.gs'; })
   .sort();
 let src = '';
 for (const f of files) src += fs.readFileSync(path.join(dir, f), 'utf8') + '\n';

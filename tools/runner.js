@@ -7,7 +7,7 @@
 // that will act as one:
 //
 //   $env:ELECTRON_RUN_AS_NODE = "1"
-//   & "$env:LOCALAPPDATA\Programs\Microsoft VS Code\Code.exe" runner.js out.txt
+//   & "$env:LOCALAPPDATA\Programs\Microsoft VS Code\Code.exe" tools/runner.js out.txt
 //
 // Two traps, both of which read as a broken test file rather than a broken
 // invocation:
@@ -22,12 +22,22 @@
 // loads them in — that is what the numeric prefixes are for. Running here does
 // not prove the load order is right in Apps Script, but it does prove it is
 // self-consistent.
+//
+// The source lives in src/ and this file in tools/, so the directory is
+// resolved from __dirname rather than from the working directory: the
+// invocation above is written from the repo root, and a run from anywhere else
+// must still read the same twenty-three files.
+//
+// EVERY .gs IN src/ IS TAKEN, with no exclusion list. src/ is exactly what gets
+// pushed to the diff tool's Apps Script project, so "what the harness loads" and
+// "what Apps Script loads" are the same set by construction rather than by two
+// filters agreeing. The fixture generator is a separate script project and lives
+// in fixtures/ for that reason.
 const fs = require('fs'), vm = require('vm'), path = require('path');
 
-const dir = __dirname;
+const dir = path.join(__dirname, '..', 'src');
 const files = fs.readdirSync(dir)
   .filter(function (f) { return /\.gs$/.test(f); })
-  .filter(function (f) { return f !== 'GenerateTestWorkbooks.gs'; })
   .sort();
 
 let src = '';
