@@ -23,7 +23,7 @@
  * names for the same reason — without both, a CSV and the fixture pair that
  * produced it cannot be matched up, which is exactly what Step 11 needs.
  */
-const VERSION = '1.1.0';
+const VERSION = '1.2.0';
 
 const OPTS = {
   derivedSection:  true,   // emit recalculated cells as DERIVED_VALUE into CSV section 2
@@ -48,6 +48,9 @@ const CHANGE_TYPES = [
   // structural
   'ROW_ADDED', 'ROW_DELETED', 'COL_ADDED', 'COL_DELETED',
   'TAB_ADDED', 'TAB_DELETED', 'TAB_RENAMED', 'TAB_SKIPPED',
+  // workbook-level. The only change that leaves every formula byte-identical
+  // in both files while the numbers move — see 41_Names.gs.
+  'NAME_REDEFINED',
   // emitted by toCsv only, never present on a Change
   'DERIVED_TRUNCATED'
 ];

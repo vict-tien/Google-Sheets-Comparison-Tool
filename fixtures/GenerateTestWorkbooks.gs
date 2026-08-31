@@ -80,7 +80,7 @@
 // names for the same reason the diff tool stamps VERSION into its CSV
 // (plan §1.1e): when a six-week-old CSV disagrees with today's, the first
 // question is whether the fixtures moved underneath it.
-const FIXTURE_VERSION = '1.1.0';
+const FIXTURE_VERSION = '1.2.0';
 
 const CONFIG = {
   // Drive folder to write into. Leave '' to create/reuse FOLDER_NAME in the
@@ -409,7 +409,8 @@ function tabSpecs_() {
     refErrorsTab_(),
     chainLeafTab_(),
     headerGuardTab_(),
-    renamedRefTab_()
+    renamedRefTab_(),
+    wholeRangeTab_()
   ];
 }
 
@@ -466,7 +467,9 @@ const TEST_INDEX = [
   ['+', 'Basics G13', 'literal "ok" replaced by the formula ="ok"', 'FORMULARIZED (rule 1), value unchanged'],
   ['+', 'Col Change', 'column E added in B', 'COL_ADDED'],
   ['+', 'Edit Distance E3', 'ref error inside an edit-distance-skipped tab', 'REF_ERROR still scanned (rule 9)'],
-  ['+', 'New Tab B3', 'added tab containing a broken reference', 'REF_ERROR from scanErrorsUnaligned']
+  ['+', 'New Tab B3', 'added tab containing a broken reference', 'REF_ERROR from scanErrorsUnaligned'],
+  ['+', 'Whole Range B2', '=SUM(Rates!$4:$4) — whole row, Rates row 4 moves', 'NOTHING: the absolute row relocates (A3)'],
+  ['+', 'Whole Range B3', "=SUM('Lookup Table'!$B:$B) — whole column, tab renamed", 'NOTHING: the sheet name relocates (A3)']
 ];
 
 // --- Untouched (test 1) -----------------------------------------------------
@@ -786,6 +789,42 @@ function lookupTableTab_() {
                r === 4 ? 'referenced as $B$4' : '']);
   }
   return { name: 'Lookup Table', grid: grid };
+}
+
+/**
+ * The two reference forms REF_RE could not match before v1.2.0, each pointed at
+ * the mutation that exposes it.
+ *
+ *   B2  =SUM(Rates!$4:$4)   A WHOLE ROW, carrying an absolute row number.
+ *       B inserts a row above Rates!4, so Sheets rewrites this to $5:$5.
+ *       Unrelocated, A still says $4:$4 and the cell reports FORMULA.
+ *       Relocated, the two agree. The row's CONTENTS move unchanged, so the
+ *       value does not move either — no section-2 row from it.
+ *
+ *   B3  =SUM('Lookup Table'!$B:$B)   A WHOLE COLUMN, and the one that looked
+ *       harmless: no row to relocate, but it carries a SHEET NAME, and B
+ *       renames that tab. Without the tabMap remap the two texts differ and
+ *       the cell reports FORMULA. Lookup Table's contents are untouched.
+ *
+ * BOTH CELLS MUST EMIT NOTHING, IN EITHER SECTION. That is what makes this tab
+ * a test: a regression does not change a number here, it ADDS a row that the
+ * expected output does not have. Fixture doc §6's totals stay 41 and 45.
+ */
+function wholeRangeTab_() {
+  const grid = [['Key', 'Value', 'Note']];
+  for (let i = 0; i < 15; i++) {
+    const r = i + 2;
+    let v = 200 + i, note = '';
+    if (r === 2) {
+      v = '=SUM(Rates!$4:$4)';
+      note = 'whole row; Rates row 4 moves down in B';
+    } else if (r === 3) {
+      v = "=SUM('Lookup Table'!$B:$B)";
+      note = 'whole column; that tab is renamed in B';
+    }
+    grid.push(['wr-' + i, v, note]);
+  }
+  return { name: 'Whole Range', grid: grid };
 }
 
 function renamedRefTab_() {

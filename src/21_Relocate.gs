@@ -31,12 +31,38 @@
 // Rates is renamed.
 
 /**
- * Plan §4b. One reference. The sheet prefix is optional; a quoted name may
- * contain doubled quotes; row and column parts are each an absolute integer, a
- * bracketed relative offset, or absent (bare R / bare C = zero offset).
+ * Plan §4b, WIDENED in v1.2.0. One reference. The sheet prefix is optional; a
+ * quoted name may contain doubled quotes; row and column parts are each an
+ * absolute integer, a bracketed relative offset, or absent.
+ *
+ * THREE ALTERNATIVES, AND THE ORDER OF THE FIRST TWO IS LOAD-BEARING.
+ *
+ *   R…C   both parts optional — R4C2, RC, R[-1]C[2]
+ *   R…    a WHOLE ROW      — =SUM(Rates!$4:$4) renders as `Rates!R4`
+ *   C…    a WHOLE COLUMN   — =SUM(Rates!$B:$B) renders as `Rates!C2`
+ *
+ * The plan's regex made the literal R and the literal C both mandatory, so
+ * neither single-part form matched, and TWO SEPARATE BUGS followed. Only the
+ * first is the obvious one:
+ *
+ *   1. `Rates!R4` carries an ABSOLUTE ROW that was never relocated. Insert a
+ *      row above Rates!4 and B reads R5 while A stays R4 — a FORMULA row that
+ *      nobody authored.
+ *   2. `Rates!C2` has no row to relocate, WHICH IS WHY IT LOOKED HARMLESS, and
+ *      still carries a sheet name that tabMap never reached. Rename Rates and
+ *      every whole-column reference in the workbook reports FORMULA.
+ *
+ * The R…C alternative MUST come first: put the R-only branch ahead of it and
+ * `R1C1` matches as the whole row `R1`, leaving `C1` to match separately — one
+ * reference silently becomes two.
+ *
+ * The two single-part branches REQUIRE an operand. Make it optional and a bare
+ * `R` or `C` matches, which fires inside ordinary text and rewrites it.
+ * isRefBoundary_ is the second half of that defence and is now load-bearing for
+ * a much wider class than it was — see its own comment.
  */
 const REF_RE =
-  /(?:(?:'((?:[^']|'')+)'|([A-Za-z0-9_.]+))!)?R(\d+|\[-?\d+\])?C(\d+|\[-?\d+\])?/g;
+  /(?:(?:'((?:[^']|'')+)'|([A-Za-z0-9_.]+))!)?(?:R(\d+|\[-?\d+\])?C(\d+|\[-?\d+\])?|R(\d+|\[-?\d+\])|C(\d+|\[-?\d+\]))/g;
 
 /**
  * Plan §4a / §4f. Replaces every double-quoted span with a placeholder so that
@@ -64,9 +90,13 @@ function restoreStrings_(text, literals) {
 }
 
 /**
- * REF_RE's shortest possible match is the two characters "RC", so it can fire
- * inside an ordinary identifier. A match is only a reference when neither
- * neighbouring character continues a word.
+ * REF_RE's shortest possible match WAS the two characters "RC". Since v1.2.0 it
+ * is `R4` or `C1`, which collide with far more ordinary text — a defined name
+ * `C1_RATE`, an identifier `R2D2`. This check therefore guards a much wider
+ * class than it was written for, and test '4h' is what holds it.
+ *
+ * A match is only a reference when neither neighbouring character continues a
+ * word.
  *
  * Not in the plan; the plan's regex has no boundary condition. Without one, a
  * name or function containing R...C is rewritten as though it were a reference.
@@ -83,16 +113,23 @@ function isRefBoundary_(whole, offset, len) {
  * Renders one reference back to text. Re-quotes the sheet name only when it
  * needs quoting, matching what Sheets itself emits — both sides of a comparison
  * pass through here, so the rendering only has to be consistent.
+ *
+ * `form` IS NOT OPTIONAL AND MUST NOT BE GUESSED. A whole-row reference has no
+ * column part, and emitting `R4C` for it corrupts every one it touches — the
+ * result still looks like a reference, so nothing downstream complains and the
+ * two sides simply stop matching. rewriteRefs_ supplies it; test '4i' holds it
+ * by rewriting every form through this function and asserting identity.
  */
-function formatRef_(sheetName, rowPart, colPart) {
+function formatRef_(sheetName, rowPart, colPart, form) {
   let prefix = '';
   if (sheetName !== null && sheetName !== undefined) {
-    prefix = /^[A-Za-z0-9_.]+$/.test(sheetName)
-      ? sheetName + '!'
-      : "'" + String(sheetName).replace(/'/g, "''") + "'!";
+    prefix = sheetPrefix_(sheetName);      // 11_Refs.gs — shared with A1 names
   }
-  return prefix + 'R' + (rowPart === undefined ? '' : rowPart) +
-                  'C' + (colPart === undefined ? '' : colPart);
+  const r = 'R' + (rowPart === undefined ? '' : rowPart);
+  const c = 'C' + (colPart === undefined ? '' : colPart);
+  if (form === 'R') return prefix + r;
+  if (form === 'C') return prefix + c;
+  return prefix + r + c;
 }
 
 /**
@@ -104,20 +141,35 @@ function formatRef_(sheetName, rowPart, colPart) {
  * (=Rates!R4C2 * Escalation!R7C3 needs two maps in one pass, test 23), and the
  * target tab is resolved per match, not per formula.
  *
- * `transform` receives { sheet, rowPart, colPart } and returns replacement text.
- * `sheet` is null for a same-tab reference — the caller resolves that to the
- * current tab, and must NOT then emit a sheet prefix that was not there.
+ * `transform` receives { sheet, rowPart, colPart, form } and returns
+ * replacement text. `sheet` is null for a same-tab reference — the caller
+ * resolves that to the current tab, and must NOT then emit a sheet prefix that
+ * was not there.
+ *
+ * THE SINGLE-PART ALTERNATIVES ARE FOLDED HERE, ONCE. REF_RE's R-only and
+ * C-only branches land in their own capture groups; every transform wants them
+ * as an ordinary rowPart or colPart plus a `form` to re-emit. Folding it in
+ * each of the three transforms instead is how the three drift apart — the
+ * failure the "one row map per formula" sabotage row already records for the
+ * per-match resolution.
  */
 function rewriteRefs_(f, transform) {
   if (f === '' || f === null || f === undefined) return '';
   const held = protectStrings_(f);
   const out = held.text.replace(REF_RE,
-    function (m, quoted, unquoted, rowPart, colPart, offset, whole) {
+    function (m, quoted, unquoted, rowPart, colPart, rowOnly, colOnly,
+              offset, whole) {
       if (!isRefBoundary_(whole, offset, m.length)) return m;
       let sheetName = null;
       if (quoted !== undefined)        sheetName = quoted.replace(/''/g, "'");
       else if (unquoted !== undefined) sheetName = unquoted;
-      return transform({ sheet: sheetName, rowPart: rowPart, colPart: colPart });
+
+      let form = 'RC';
+      if (rowOnly !== undefined)      { form = 'R'; rowPart = rowOnly; }
+      else if (colOnly !== undefined) { form = 'C'; colPart = colOnly; }
+
+      return transform({ sheet: sheetName, rowPart: rowPart, colPart: colPart,
+                         form: form });
     });
   return restoreStrings_(out, held.literals);
 }
@@ -164,7 +216,7 @@ function relocate(f, tables, currentTab) {
         if (mapped !== undefined) rowPart = String(mapped);
       }
     }
-    return formatRef_(name, rowPart, ref.colPart);
+    return formatRef_(name, rowPart, ref.colPart, ref.form);
   });
 }
 
@@ -195,7 +247,7 @@ function maskUnresolvable(f, tables, currentTab) {
     }
     // The sheet name is NOT re-mapped here: this runs on A's already-relocated
     // formula and on B's raw one, so both sides already carry B's names.
-    return formatRef_(ref.sheet, rowPart, ref.colPart);
+    return formatRef_(ref.sheet, rowPart, ref.colPart, ref.form);
   });
 }
 
@@ -205,7 +257,7 @@ function maskUnresolvable(f, tables, currentTab) {
  * diagnostic. Deliberately loose: a false positive only makes a warning
  * available, it never changes a classification.
  */
-const ABS_ROW_RE = /(?:^|[^A-Za-z0-9_.])R\d+C/;
+const ABS_ROW_RE = /(?:^|[^A-Za-z0-9_.])R\d+(?:C|(?![A-Za-z0-9_.]))/;
 
 /**
  * The target tabs a formula references that have NO row map — i.e. exactly the

@@ -289,4 +289,108 @@ function t_relocate_tests() {
                 [], 'string literals are not scanned');
   });
 
+  // --- whole-row and whole-column references (v1.2.0) -----------------------
+  //
+  // Before v1.2.0 the literal R and the literal C in REF_RE were both
+  // mandatory, so `Rates!R4` and `Rates!C2` matched NOTHING. Two separate bugs
+  // came out of that, and only the first is the obvious one. See 21_Relocate.gs.
+
+  t_test('4f', 'relocate - a whole-row reference carries an absolute row, and must move',
+    function () {
+    // =SUM(Rates!$4:$4) is `Rates!R4`. No column part at all. Unmatched, the row
+    // never moved, and every row inserted above Rates!4 reported a FORMULA that
+    // nobody authored.
+    const tables = { tabMap: { Rates: 'Rates' },
+                     rowMaps: { Rates: new Map([[4, 5]]) } };
+    t_assertEqual(relocate('=SUM(Rates!R4)', tables, 'HVAC'), '=SUM(Rates!R5)',
+                'the absolute row moves');
+    // Each endpoint resolves independently, and R6 - which has no sheet prefix -
+    // resolves to the CURRENT tab, which has no map, so it is left alone.
+    t_assertEqual(relocate('=SUM(Rates!R4:R6)', tables, 'HVAC'),
+                '=SUM(Rates!R5:R6)', 'per-match resolution still holds');
+    t_assertEqual(
+      relocate('=R4', { tabMap: {}, rowMaps: { HVAC: new Map([[4, 9]]) } }, 'HVAC'),
+      '=R9', 'same-tab whole row, and no C is invented');
+
+    // Unverifiable exactly as an R4C2 would be, and masked the same way.
+    const noMap = { tabMap: {}, rowMaps: {} };
+    t_assertEqual(maskUnresolvable('=SUM(Rates!R4)', noMap, 'HVAC'),
+                '=SUM(Rates!R#)', 'masked, and still a whole row');
+    t_assertEqual(unresolvableTargets('=SUM(Rates!R4)', noMap, 'HVAC'),
+                ['Rates'], 'and the tab is named');
+
+    // The Step 10 relocation warning is gated on absRefs, so its regex has to
+    // see this form too or the warning goes quiet on exactly the workbooks that
+    // need it.
+    t_assertEqual(ABS_ROW_RE.test('=SUM(Rates!R4)'), true,
+                'the absRefs gate sees a whole row');
+    t_assertEqual(ABS_ROW_RE.test('=SUM(Rates!C2)'), false,
+                'and does not see a whole column');
+  });
+
+  t_test('4g', 'relocate - a whole-column reference has no row, and still needs its sheet name',
+    function () {
+    // =SUM(Rates!$B:$B) is `Rates!C2`. THIS IS THE ONE THAT LOOKED HARMLESS.
+    // There is no row to relocate - but it still carries a SHEET NAME, and
+    // tabMap never reached it, so a renamed tab produced a false FORMULA on
+    // every whole-column reference in the workbook.
+    const tables = { tabMap: { Rates: 'Rates 2026' },
+                     rowMaps: { Rates: new Map([[4, 5]]) } };
+    t_assertEqual(relocate('=SUM(Rates!C2)', tables, 'HVAC'),
+                "=SUM('Rates 2026'!C2)",
+                'renamed, requoted because it now needs quoting, column untouched');
+    t_assertEqual(relocate('=SUM(C2)', tables, 'HVAC'), '=SUM(C2)',
+                'no sheet prefix is invented where none was written');
+
+    // Nothing about a column is unverifiable: there is no row that could fail
+    // to map. Masking one would make a real edit indistinguishable from noise.
+    const noMap = { tabMap: {}, rowMaps: {} };
+    t_assertEqual(maskUnresolvable('=SUM(Rates!C2)', noMap, 'HVAC'),
+                '=SUM(Rates!C2)', 'a column is never masked');
+    t_assertEqual(unresolvableTargets('=SUM(Rates!C2)', noMap, 'HVAC'), [],
+                'and never named as unresolvable');
+  });
+
+  t_test('4h', 'REF_RE - the boundary check now guards a much wider class',
+    function () {
+    // isRefBoundary_ was written when the shortest possible match was `RC`. It
+    // is now `R4` or `C1`, which collide with far more ordinary text. The check
+    // is load-bearing for a class it never had to cover.
+    const scan = function (f) {
+      const seen = [];
+      rewriteRefs_(f, function (r) {
+        seen.push(formatRef_(r.sheet, r.rowPart, r.colPart, r.form));
+        return 'X';
+      });
+      return seen;
+    };
+    t_assertEqual(scan('=R4'),      ['R4'],   'a whole row is a reference');
+    t_assertEqual(scan('=C1'),      ['C1'],   'a whole column is a reference');
+    t_assertEqual(scan('=RC'),      ['RC'],   'the self reference still matches');
+    t_assertEqual(scan('=R1C1'),    ['R1C1'], 'the full form still wins over R-only');
+    t_assertEqual(scan('=C1_RATE'), [], 'an identifier starting C1 is not a reference');
+    t_assertEqual(scan('=R2D2'),    [], 'nor one starting R2');
+    t_assertEqual(scan('=MYR4'),    [], 'nor one ending R4');
+    t_assertEqual(scan('=SUM(R)'),  [], 'a bare R has no operand and is not a reference');
+    t_assertEqual(scan('=SUM(C)'),  [], 'nor a bare C');
+    t_assertEqual(scan('="C1"'),    [], 'and a string literal is still protected');
+  });
+
+  t_test('4i', 'formatRef_ re-emits the form it was given, and never invents the other half',
+    function () {
+    // Emitting `R4C` for a whole-row reference would corrupt every one it
+    // touched, and the corruption is SILENT - the result still looks like a
+    // reference. An identity rewrite is the cheapest way to hold that.
+    const id = function (f) {
+      return rewriteRefs_(f, function (r) {
+        return formatRef_(r.sheet, r.rowPart, r.colPart, r.form);
+      });
+    };
+    ['=Rates!R4', '=Rates!C2', '=RC', '=R1C1', "='It''s'!R4C2",
+     '=R[-1]C[2]', '=SUM(Rates!R4:R6)', '=Rates!R4+Rates!C2'
+    ].forEach(function (f) {
+      t_assertEqual(id(f), f, 'identity: ' + f);
+    });
+  });
+
 }

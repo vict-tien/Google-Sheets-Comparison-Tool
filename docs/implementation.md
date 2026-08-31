@@ -347,8 +347,18 @@ producing an error.
 | 10 | Check the `HARDCODED` rows | What the diff half of the tool exists for |
 | 11 | Sanity-check the two footer counts against each other, then read section 2 for the downstream tabs | A section 2 of zero against a model full of formulas means `derivedSection` never fired. A section 1 of zero with a large section 2 means the revision changed inputs and nothing else — which is a real and useful answer |
 
+
 Check the result against fixture doc §6: **41 rows in section 1, 45 in section
-2**, the eight reference-error rows, and the tabs that must emit nothing. Then
+2**, the eight reference-error rows, and the tabs that must emit nothing.
+
+**At `FIXTURE_VERSION` 1.2.0, two of those silent cells are new and are the whole
+point of the run.** The `Whole Range` tab holds `=SUM(Rates!$4:$4)` and
+`=SUM('Lookup Table'!$B:$B)` — the two forms `REF_RE` could not match before
+v1.2.0. Both must emit **nothing**, in either section, so a failure ADDS a row
+rather than changing one. Step 3's part (a) is what actually gates them: if
+either appears in the *unmatched* list, the widened regex does not describe what
+`getFormulasR1C1()` really emits, and every `FORMULA` row in the run is suspect
+for the reason §4.9 gives. Then
 the two variant runs, fixture doc §6.5 — `derivedSection: false` and
 `derivedCap: 3`, both via `runWith(urlA, urlB, opts)`.
 

@@ -157,7 +157,27 @@ const MUTATIONS = [
    `  const cap = (opts.derivedCap === undefined) ? section2.length : opts.derivedCap;
   const kept = section2.slice(0, cap);`,
    `  const cap = (opts.derivedCap === undefined) ? section2.length : opts.derivedCap;
-  const kept = section2.slice().reverse().slice(0, cap);`]
+  const kept = section2.slice().reverse().slice(0, cap);`],
+
+  // --- v1.2.0: whole-row and whole-column references --------------------------
+
+  ['REF_RE reverted to a mandatory R and a mandatory C',
+   "  /(?:(?:'((?:[^']|'')+)'|([A-Za-z0-9_.]+))!)?(?:R(\\d+|\\[-?\\d+\\])?C(\\d+|\\[-?\\d+\\])?|R(\\d+|\\[-?\\d+\\])|C(\\d+|\\[-?\\d+\\]))/g;",
+   "  /(?:(?:'((?:[^']|'')+)'|([A-Za-z0-9_.]+))!)?R(\\d+|\\[-?\\d+\\])?C(\\d+|\\[-?\\d+\\])?/g;"],
+
+  ['formatRef_ ignores `form` and always emits both halves',
+   `  if (form === 'R') return prefix + r;
+  if (form === 'C') return prefix + c;
+  return prefix + r + c;`,
+   `  return prefix + r + c;`],
+
+  ['The R-only branch is ordered ahead of R…C, so R1C1 splits into two refs',
+   "(?:R(\\d+|\\[-?\\d+\\])?C(\\d+|\\[-?\\d+\\])?|R(\\d+|\\[-?\\d+\\])|C(\\d+|\\[-?\\d+\\]))",
+   "(?:R(\\d+|\\[-?\\d+\\])|C(\\d+|\\[-?\\d+\\])|R(\\d+|\\[-?\\d+\\])?C(\\d+|\\[-?\\d+\\])?)"],
+
+  ['The single-part branches no longer require an operand, so a bare R matches',
+   "|R(\\d+|\\[-?\\d+\\])|C(\\d+|\\[-?\\d+\\]))",
+   "|R(\\d+|\\[-?\\d+\\])?|C(\\d+|\\[-?\\d+\\])?)"]
 ];
 
 // diffCell rule 3 is a block move rather than a substitution, so it gets its
@@ -196,7 +216,7 @@ function failedTests(src) {
 const out = [];
 const base = failedTests(BASE);
 out.push('BASELINE: ' + (base.ids.length === 0 && base.totals.length === 0
-  ? 'clean — 79 pass, both declared totals met'
+  ? 'clean — 87 pass, both declared totals met'
   : 'NOT CLEAN: ' + base.ids.join(', ') + ' ' + base.totals.join(' ')));
 if (base.error) out.push('  ' + base.error);
 out.push('');

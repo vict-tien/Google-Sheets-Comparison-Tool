@@ -54,8 +54,20 @@ function compareWorkbooks(wbA, wbB, opts) {
 
   // ---- every tab is aligned before any tab is compared ----
 
-  // PHASE 2 — compare
   const tables = { rowMaps: rowMaps, tabMap: pairing.tabMap };
+
+  // PHASE 1b — defined names.
+  //
+  // A WORKBOOK-LEVEL COMPARISON, so it is a pass of its own rather than part of
+  // the per-tab loop. Its position is load-bearing for the same reason the
+  // phase 1 / phase 2 split is: a definition must be RELOCATED before it is
+  // compared, and relocation needs every tab's row map. Run it above the phase
+  // 1 loop and it reports every name below an inserted row as redefined —
+  // 41_Names.test.gs '9b' is that guard.
+  changes.push.apply(changes,
+    diffNames(wbA.definedNames, wbB.definedNames, tables));
+
+  // PHASE 2 — compare
   const results = [];
   for (let i = 0; i < prepared.length; i++) {
     const p = prepared[i];

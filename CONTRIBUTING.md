@@ -32,8 +32,13 @@ name that file and nothing else:
 grep -l 'SpreadsheetApp\|DriveApp\|PropertiesService\|Utilities\|Session\|MimeType' src/*.gs
 ```
 
+This must name `src/90_Main.gs` **and nothing else** — including from a comment.
+A comment that merely mentions one of these globals joins the grep's output and
+costs it its precision, so prose elsewhere spells them around: see the note in
+`src/01_Types.gs`.
+
 The property it protects is that `runTests()` raises **no authorisation prompt**,
-which is what lets 79 tests run on in-memory fixtures. No test can catch a
+which is what lets 87 tests run on in-memory fixtures. No test can catch a
 violation, because the suite never runs inside Apps Script. The grep is the whole
 defence.
 

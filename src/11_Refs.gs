@@ -18,6 +18,21 @@ function columnLetter(n) {
   return s;
 }
 
+/**
+ * Sheet name -> the `Name!` prefix, quoted only where it needs quoting, which
+ * is what Sheets itself emits.
+ *
+ * ONE SOURCE OF TRUTH, and it has two callers in two notations: formatRef_
+ * (R1C1, 21_Relocate.gs) and nameTargetA1_ (A1, 41_Names.gs). Two copies of
+ * this rule drift, and the drift surfaces as a cross-sheet reference that
+ * compares unequal to itself.
+ */
+function sheetPrefix_(sheetName) {
+  return /^[A-Za-z0-9_.]+$/.test(sheetName)
+    ? sheetName + '!'
+    : "'" + String(sheetName).replace(/'/g, "''") + "'!";
+}
+
 /** Sheet row + sheet column -> 'B7'. Both arguments are 1-based SHEET numbers. */
 function a1(row, col) {
   return columnLetter(col) + row;

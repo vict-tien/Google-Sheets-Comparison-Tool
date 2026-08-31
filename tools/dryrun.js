@@ -69,12 +69,42 @@ function stubSheet(name, tab) {
   });
 }
 
-function stubSpreadsheet(title, wb) {
+/**
+ * A NamedRange, plus the one that throws.
+ *
+ * `sheetName === null` is a name left pointing at a deleted sheet, and
+ * getRange() throws for it on the real API. readNames_ must SKIP it rather than
+ * let it kill the run — a broken name is not a redefinition, and the formulas
+ * using it already surface as #NAME?. That branch has no other coverage: the
+ * suite cannot reach 90_Main.gs at all.
+ */
+function stubNamedRange(name, sheetName, row, col, numRows, numCols) {
+  return {
+    getName:  function () { return name; },
+    getRange: function () {
+      if (sheetName === null) throw new Error('range no longer resolves');
+      return {
+        getSheet:      function () {
+          return { getName: function () { return sheetName; } };
+        },
+        getRow:        function () { return row; },
+        getColumn:     function () { return col; },
+        getNumRows:    function () { return numRows; },
+        getNumColumns: function () { return numCols; }
+      };
+    }
+  };
+}
+
+function stubSpreadsheet(title, wb, named) {
   return {
     getName:   function () { return title; },
     getSheets: function () {
       return wb.names.map(function (n) { return stubSheet(n, wb.tabs[n]); });
-    }
+    },
+    // A read, so it belongs here rather than behind the forbidding Proxy —
+    // that Proxy exists to catch WRITES to a source spreadsheet.
+    getNamedRanges: function () { return named || []; }
   };
 }
 
@@ -101,8 +131,24 @@ const pair = vm.runInContext(`
   return { A: A, B: B };
 })()`, ctx);
 
-const ssA = stubSpreadsheet('2026 Cost Model v3', pair.A);
-const ssB = stubSpreadsheet('2026 Cost Model v4', pair.B);
+// 41_Names.gs, exercised end to end. Rates has a row inserted at sheet
+// row 3, so its row map sends 4 -> 5 and 10 -> 11.
+//
+//   BaseRate  B4 -> B5   explained by the map      -> MUST emit nothing
+//   Fee       B10 -> B2  not explained by anything -> MUST emit NAME_REDEFINED
+//   Broken    getRange() throws                    -> MUST be skipped, not fatal
+const namesA = [
+  stubNamedRange('BaseRate', 'Rates', 4, 2, 1, 1),
+  stubNamedRange('Fee', 'Rates', 10, 2, 1, 1),
+  stubNamedRange('Broken', null, 0, 0, 0, 0)
+];
+const namesB = [
+  stubNamedRange('BaseRate', 'Rates', 5, 2, 1, 1),
+  stubNamedRange('Fee', 'Rates', 2, 2, 1, 1)
+];
+
+const ssA = stubSpreadsheet('2026 Cost Model v3', pair.A, namesA);
+const ssB = stubSpreadsheet('2026 Cost Model v4', pair.B, namesB);
 
 ctx.SpreadsheetApp = {
   openByUrl: function (url) {
@@ -165,7 +211,7 @@ if (threw === null) {
   check('  written as MimeType.CSV', state.file.mime === 'text/csv',
         state.file.mime);
   check('  filename carries the stamp and VERSION',
-        state.file.name === 'changes-20260822-1432-v1.1.0.csv', state.file.name);
+        state.file.name === 'changes-20260822-1432-v1.2.0.csv', state.file.name);
   check('  Utilities.sleep not called below the pacing threshold',
         state.sleeps === 0, String(state.sleeps));
 
@@ -176,6 +222,23 @@ if (threw === null) {
   check('  the CSV was NOT logged', logged.indexOf('DERIVED_VALUE,') === -1);
   check('  both tables reached the file',
         state.file.content.indexOf('# SECTION 2') > 0);
+
+  // A4. The whole point of the pass is that ONE of these two names reports and
+  // the other does not. Asserting only that a row exists would pass just as
+  // happily if every name reported.
+  const nameRows = state.file.content.split('\n')
+    // NOT `indexOf(...) > 0`: a workbook-scoped name has tab '', so the row
+    // STARTS with the comma and indexOf returns 0.
+    .filter(function (l) { return l.indexOf('NAME_REDEFINED') !== -1; });
+  check('  the repointed name reports, and only it',
+        nameRows.length === 1 && nameRows[0].indexOf('Fee') > 0,
+        nameRows.join(' | ') || '(none)');
+  check('  the name explained by the row map stays silent',
+        nameRows.join('').indexOf('BaseRate') === -1);
+  check('  a name whose range no longer resolves is skipped, not fatal',
+        nameRows.join('').indexOf('Broken') === -1);
+  check('  and the summary says so on its own line',
+        /^NAMES: 1 defined name was repointed/m.test(log.join('\n')));
   check('  return value carries fileId, fileUrl, rows and summary',
         result && result.fileId === 'file-id' && typeof result.rows === 'number' &&
         typeof result.summary === 'string');

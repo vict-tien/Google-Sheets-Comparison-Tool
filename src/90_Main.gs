@@ -107,6 +107,40 @@ function sheetNames_(sheets) {
 }
 
 /**
+ * The workbook's defined names, in the structured shape 41_Names.gs compares.
+ * Needs no scope beyond spreadsheets.readonly.
+ *
+ * EVERY NAME COMES BACK WORKBOOK-SCOPED, because SpreadsheetApp exposes no
+ * scope accessor on a NamedRange. That is a platform limitation recorded here
+ * rather than a modelling choice — DefinedName.scope carries a real value so
+ * the shape stays honest, and this host can only ever put '' in it.
+ *
+ * getRange() throws for a name whose target no longer resolves — a name left
+ * pointing into a deleted sheet. Those are skipped rather than allowed to kill
+ * the run: a broken name is not a redefinition, and the formulas using it
+ * already surface as #NAME? through the error scan.
+ */
+function readNames_(ss) {
+  const out = [];
+  const named = ss.getNamedRanges();
+  for (let i = 0; i < named.length; i++) {
+    let r = null;
+    try { r = named[i].getRange(); } catch (e) { continue; }
+    if (!r) continue;
+    out.push({
+      name:    named[i].getName(),
+      scope:   '',
+      sheet:   r.getSheet().getName(),
+      row:     r.getRow(),
+      col:     r.getColumn(),
+      numRows: r.getNumRows(),
+      numCols: r.getNumColumns()
+    });
+  }
+  return out;
+}
+
+/**
  * The dropdown entry point. Resolves configuration and calls runWith.
  *
  * THE URLS ARE NOT IN SOURCE. They are Script Properties, so that no
@@ -169,6 +203,8 @@ function runWith(urlA, urlB, opts) {
   // PHASES 1 and 2 — read, align every tab, then compare every tab.
   const wbA = readSheets_(shA, namesA, wantA);
   const wbB = readSheets_(shB, namesB, wantB);
+  wbA.definedNames = readNames_(ssA);
+  wbB.definedNames = readNames_(ssB);
   const result = compareWorkbooks(wbA, wbB, opts);
 
   // PHASE 3 — emit. The filename carries VERSION so a CSV found later can be
@@ -269,7 +305,7 @@ function verifyReferenceForms(url, tabName) {
         // (a) does REF_RE see anything at all in this R1C1 form?
         const found = [];
         rewriteRefs_(rcf, function (m) {
-          found.push(formatRef_(m.sheet, m.rowPart, m.colPart));
+          found.push(formatRef_(m.sheet, m.rowPart, m.colPart, m.form));
           return '';
         });
         if (found.length) withRefs++;

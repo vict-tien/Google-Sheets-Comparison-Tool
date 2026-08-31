@@ -33,8 +33,8 @@ is validated against:
 
 ```
 <folder>/
-  Diff Fixture A v1.1.0 <stamp>     the "old" revision   — 29 tabs
-  Diff Fixture B v1.1.0 <stamp>     the "new" revision   — 29 tabs (one deleted, one added)
+  Diff Fixture A v1.2.0 <stamp>     the "old" revision   — 30 tabs
+  Diff Fixture B v1.2.0 <stamp>     the "new" revision   — 30 tabs (one deleted, one added)
 ```
 
 Between them they exercise all 38 acceptance tests from the implementation
@@ -78,7 +78,7 @@ procedure, not something the generator drives.
    property form for that reason.
 
 ```js
-const FIXTURE_VERSION = '1.1.0';                        // stamped into both file names
+const FIXTURE_VERSION = '1.2.0';                        // stamped into both file names
 
 const CONFIG = {
   FOLDER_ID:       '',                                  // '' → create in My Drive root
@@ -406,6 +406,18 @@ the assignment is checkable without reading the tool's code.
 |---|---|
 | **Section 1 — changes and breakage** | **41** |
 | **Section 2 — derived values** | **45** |
+
+**Both totals are unchanged at `FIXTURE_VERSION` 1.2.0, and that is the point of
+the tab added there.** `Whole Range` holds the two reference forms `REF_RE` could
+not match before v1.2.0 — `=SUM(Rates!$4:$4)` in `B2` and
+`=SUM('Lookup Table'!$B:$B)` in `B3` — each pointed at the mutation that exposes
+it: `Rates` gains a row above row 4, and `Lookup Table` is renamed.
+
+**Both cells must emit nothing, in either section.** The row's contents move
+unchanged so no value moves, and the sheet name relocates through `tabMap` so no
+text differs. A regression therefore does not change a number here — **it adds a
+row that this table does not have**, which is the only kind of fixture failure
+that cannot be mistaken for a fixture edit.
 
 ### 6.1 Section 1, by change type
 

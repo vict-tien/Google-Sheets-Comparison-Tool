@@ -76,7 +76,33 @@
  */
 
 /**
- * @typedef {{ tabs: Object<string, TabData>, names: Array<string> }} Workbook
+ * One defined name, resolved to coordinates rather than left as text.
+ *
+ * STRUCTURED, NOT A STRING, and that is what lets 41_Names.gs relocate a
+ * definition with no A1 parser and no R1C1 translator: the row is already a
+ * SHEET row, which is exactly what rowMaps is keyed and valued in.
+ *
+ * `scope` is '' for a workbook-scoped name and the owning tab's name for a
+ * sheet-scoped one. The Apps Script host reports every name as workbook-scoped
+ * because the platform exposes no scope accessor on a named range — see
+ * readNames_. (Spelled without the global's name on purpose: the purity grep in
+ * CONTRIBUTING.md must keep naming one file, and a comment should not join it.)
+ *
+ * @typedef {{ name: string, scope: string, sheet: string,
+ *             row: number, col: number,
+ *             numRows: number, numCols: number }} DefinedName
+ */
+
+/**
+ * `names` is the TAB name list; `definedNames` is the defined-name list. The
+ * collision is why the second is not called `names` — they are different things
+ * and one of them was here first.
+ *
+ * `definedNames` is optional: a workbook built without it compares exactly as
+ * before and emits no NAME_REDEFINED rows.
+ *
+ * @typedef {{ tabs: Object<string, TabData>, names: Array<string>,
+ *             definedNames: (Array<DefinedName>|undefined) }} Workbook
  */
 
 /**

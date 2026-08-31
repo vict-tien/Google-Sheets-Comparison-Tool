@@ -7,6 +7,58 @@ so an output file can be attributed to a build.
 
 This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] — 2026-08-31
+
+**The comparison basis changes for the first time**, and in both cases because
+the tool was under-reporting: one reference form was never relocated, and one
+kind of authored edit was invisible to every pass in the build.
+
+87 tests pass — the 79 that existed are **unchanged and green**, which is the
+regression gate for both changes. The sabotage matrix runs to 24 rows, all
+caught, none decorative.
+
+### Fixed
+
+- **`REF_RE` now matches whole-row and whole-column references.** The literal
+  `R` and the literal `C` were both mandatory, so `Rates!R4` (`=SUM(Rates!$4:$4)`)
+  and `Rates!C2` (`=SUM(Rates!$B:$B)`) matched nothing at all. Two bugs followed,
+  and only the first is the obvious one:
+  - a whole-**row** reference carries an **absolute row that was never
+    relocated**, so inserting a row above it reported a `FORMULA` nobody authored;
+  - a whole-**column** reference has no row to relocate — which is why it looked
+    harmless — but still carries a **sheet name that `tabMap` never reached**, so
+    renaming a tab reported a `FORMULA` on every one of them.
+
+  `formatRef_` now takes the reference's `form` and re-emits it, because emitting
+  `R4C` for a whole-row reference corrupts it silently. `isRefBoundary_` is
+  unchanged but now guards a much wider class: the shortest possible match went
+  from `RC` to `R4`.
+
+### Added
+
+- **`NAME_REDEFINED`** — the first new change type since the taxonomy was
+  written. A defined name repointed from `Rates!$B$4` to `Rates!$B$9` leaves
+  **every formula byte-identical in both files** while the numbers move; no other
+  pass in this build can see it.
+  - `src/41_Names.gs`, a workbook-level pass that runs **after alignment**, so a
+    definition is relocated before it is compared. Without that ordering, every
+    name below an inserted row reports as redefined.
+  - Reports **redefinition only**. A deleted name surfaces as `#NAME?` through the
+    error scan, and an added one changes nothing until it is used.
+  - `readNames_` in `src/90_Main.gs` reads them via `getNamedRanges()`, which
+    `spreadsheets.readonly` already covers — **no manifest change**.
+- `sheetPrefix_` (`src/11_Refs.gs`) — one source of truth for sheet-name quoting,
+  now shared by the R1C1 and A1 renderers.
+- `tools/dryrun.js` stubs `getNamedRanges()` and drives the new pass end to end:
+  one name explained by the row map (**must stay silent**), one genuinely
+  repointed (**must report**), and one whose `getRange()` throws (**must be
+  skipped, not fatal**). That third branch has no other coverage — the suite
+  cannot reach `90_Main.gs` at all, which is how the first version of this
+  change shipped a `TypeError` that 87 green tests could not see.
+- Fixture generator: a `Whole Range` tab holding both new reference forms, each
+  pointed at the mutation that exposes it. **Both must emit nothing**, so a
+  regression adds a row rather than changing one. `FIXTURE_VERSION` is `1.2.0`.
+
 ## [Unreleased]
 
 Repository layout only — **no behaviour change**, and all 79 tests plus the

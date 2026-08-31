@@ -24,7 +24,7 @@
 const T_PLAN_TOTAL = 38;
 
 /** Local tests of branches the plan defines but does not number. */
-const T_LOCAL_TOTAL = 41;
+const T_LOCAL_TOTAL = 49;
 
 /**
  * The explicit registration list. One line per .test.gs file, in load order.
@@ -43,6 +43,7 @@ function t_registerAll_() {
   t_suite('31_DiffTab',  t_diffTab_tests);
   t_suite('50_Csv',      t_csv_tests);
   t_suite('40_Pair',     t_pair_tests);
+  t_suite('41_Names',    t_names_tests);
   t_suite('70_Compare',  t_compare_tests);
   t_suite('90_Main',     t_main_tests);
 }

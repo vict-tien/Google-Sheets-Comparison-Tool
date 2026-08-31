@@ -126,8 +126,13 @@ function buildSummary(report) {
   // The two section counts. They describe very different review jobs, so the
   // footer reports them apart rather than as one total.
   let sec1 = 0, sec2 = 0;
+  // Workbook-level, so it belongs to no tab and lands in no column of the table
+  // below. It gets its own line instead — silence would make the one change
+  // that leaves every formula identical the one change nobody sees.
+  let namesRedefined = 0;
   for (let i = 0; i < changes.length; i++) {
     const c = changes[i];
+    if (c.change === 'NAME_REDEFINED') namesRedefined++;
     if (sectionOf(c) === 2) sec2++; else sec1++;
     const col = SUMMARY_TYPE_COL[c.change];
     if (col) { const b = bucket(c.tab); b[col]++; b.cells++; }
@@ -242,6 +247,13 @@ function buildSummary(report) {
   if (derivedTotal > 0) {
     L.push('DERIVED: ' + derivedTotal + ' cell' + (derivedTotal === 1 ? '' : 's') +
            ' recalculated with unchanged formulas (section 2).');
+  }
+
+  if (namesRedefined > 0) {
+    L.push('NAMES: ' + namesRedefined + ' defined name' +
+           (namesRedefined === 1 ? ' was' : 's were') + ' repointed. Every ' +
+           'formula using ' + (namesRedefined === 1 ? 'it' : 'them') +
+           ' is unchanged in text.');
   }
 
   if (refTotal === 0) {
