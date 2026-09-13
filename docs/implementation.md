@@ -64,7 +64,7 @@ B: 2026 Cost Model v4    (6 tabs)
 TAB                   STATUS        REF   VAL   FORM   UNVER   VOL   HARD   FMLZD   ±ROW   ±COL  │   DERIV
 ─────────────────────────────────────────────────────────────────────────────────────────────────┼────────
 Assumptions           modified        0     0      0       0     0      0       0     +1      0  │       6
-HVAC Capex            modified        1     0      0       1     1      0       0      0      0  │       0
+Fleet Capex           modified        1     0      0       1     1      0       0      0      0  │       0
 Rates                 modified        0     0      0       0     0      0       0     +1      0  │       0
 Escalation            SKIPPED         0     —      —       —     —      —       —      —      —  │       —
 Cover → C o v e r     renamed         0     0      0       0     0      0       0      0      0  │       0
@@ -97,13 +97,13 @@ and writes:
 ```
 tab,change,a_ref,b_ref,column,old,new
 Ledger,REF_ERROR,,B4,B,,'=Old!#REF!
-HVAC Capex,REF_ERROR,C14,C14,C,'=Rates!#REF!,'=Rates!#REF!
+Fleet Capex,REF_ERROR,C14,C14,C,'=Rates!#REF!,'=Rates!#REF!
 Cover,TAB_RENAMED,,,,Cover,C o v e r
 Scratch,TAB_DELETED,,,,Scratch,
 Ledger,TAB_ADDED,,,,,Ledger
 Assumptions,ROW_ADDED,,A15,,,Inserted|999|
-HVAC Capex,FORMULA_UNVERIFIED,C10,C10,C,'=Escalation!$B$4,'=Escalation!$B$5
-HVAC Capex,VOLATILE_VALUE,C12,C12,C,55,77
+Fleet Capex,FORMULA_UNVERIFIED,C10,C10,C,'=Escalation!$B$4,'=Escalation!$B$5
+Fleet Capex,VOLATILE_VALUE,C12,C12,C,55,77
 Rates,ROW_ADDED,,A3,,,Inserted|999
 Escalation,TAB_SKIPPED,,,,,edit distance 45% — structure differs
 
@@ -117,12 +117,12 @@ Assumptions,DERIVED_VALUE,C7,C7,C,104,204
 Assumptions,DERIVED_VALUE,C8,C8,C,105,205
 ```
 
-**Read that output in order.** `HVAC Capex` holds `=Rates!$B$4` and a row was
+**Read that output in order.** `Fleet Capex` holds `=Rates!$B$4` and a row was
 inserted in `Rates`; the reference is now `=Rates!$B$5` in B and **produces no
 row at all**, because relocation resolved it. That absence is the tool. The one
 `FORMULA_UNVERIFIED` is the same shape pointing at `Escalation`, which was
 skipped, so nothing knows where its rows went — and the notes name `Escalation`
-rather than `HVAC Capex`, because `Escalation` is the tab a reader has to go and
+rather than `Fleet Capex`, because `Escalation` is the tab a reader has to go and
 look at.
 
 ### Which plan revision this describes
@@ -556,7 +556,7 @@ The alternative was to let tests drive `alignRows` and `diffTab` in whatever ord
 each found convenient. Tests 18, 22 and 26 exist to check that **every tab is
 aligned before any tab is compared**; if that ordering lives in the test file,
 those tests verify a copy of the logic and `runWith()` is free to get it wrong.
-Test 18 lists `HVAC` *before* `Rates` in both workbooks for exactly this reason —
+Test 18 lists `Fleet` *before* `Rates` in both workbooks for exactly this reason —
 a single-pass implementation reaches the referencing tab first, has no `Rates`
 row map, cannot relocate, and reports a false `FORMULA`. The mutation
 "single-pass" now fails **47 of the 79 tests**: it is the single most destructive
@@ -865,7 +865,7 @@ cannot be the tab *holding* those formulas. The count is attributed to the tab
 resolution and collects the names. Running the same rule is the point — a second,
 independently written predicate could drift and name a tab that was not masked.
 Cost is bounded: it runs only for cells already classified `FORMULA_UNVERIFIED`.
-Test '10e' asserts the attribution names `Rates`, the skipped tab, not `HVAC`,
+Test '10e' asserts the attribution names `Rates`, the skipped tab, not `Fleet`,
 which holds the formula.
 
 ### 5.4 The noise ratio is recorded, never emitted — and counts section 1 only
@@ -1034,15 +1034,15 @@ references, so they are what appears in `aRef`/`bRef`):
 |---|---|---|
 | 7 | `=RC[-1]*2` in column C of 16 rows; row inserted at the **top** of B | 1 `ROW_ADDED`; **0 `FORMULA`, 0 `VALUE`**, total 1 |
 | 12 | Header `ID,Name,Cost` vs `ID,Name,Price`, 15 identical data rows | 1 `TAB_SKIPPED`, `column` `C`, total 1 |
-| 18 | `HVAC!C10` = `=Rates!$B$4`; row inserted in `Rates` above row 4. **`HVAC` listed first** | 1 `ROW_ADDED`; **0 `FORMULA`**, total 1 |
+| 18 | `Fleet!C10` = `=Rates!$B$4`; row inserted in `Rates` above row 4. **`Fleet` listed first** | 1 `ROW_ADDED`; **0 `FORMULA`**, total 1 |
 | 19 | `Rates` row 4 deleted; `Assumptions!C10` becomes `=Rates!#REF!` | 1 `ROW_DELETED` + 1 `REF_ERROR_NEW`, total 2; the error's `tab` is `Assumptions` |
 | 20 | 20 rows, 9 even-indexed rows rewritten | 1 `TAB_SKIPPED`, reason `edit distance 45% — structure differs` |
-| 22 | `Rates` unalignable; `HVAC!C10` shifts `R4C2`→`R5C2` | 1 `FORMULA_UNVERIFIED`, 0 `FORMULA`, 1 `TAB_SKIPPED`, total 2 |
+| 22 | `Rates` unalignable; `Fleet!C10` shifts `R4C2`→`R5C2` | 1 `FORMULA_UNVERIFIED`, 0 `FORMULA`, 1 `TAB_SKIPPED`, total 2 |
 | 23 | `=Rates!$B$4*Escalation!$C$7`; rows inserted in **both** targets | 2 `ROW_ADDED`; **0 `FORMULA`, 0 `FORMULA_UNVERIFIED`**, total 2 |
 | 24 | Same formula; `Rates` maps 4→5 but B points at row 9; `Escalation` unalignable | 1 `FORMULA`, **0 `FORMULA_UNVERIFIED`**, 1 `TAB_SKIPPED`, 1 `ROW_ADDED`, total 3 |
-| 26 | `HVAC!C10`→`Assumptions!C7`→`Rates!B4`; rows inserted in both targets | 2 `ROW_ADDED`; **0 `FORMULA`, 0 `FORMULA_UNVERIFIED`**, total 2 |
+| 26 | `Fleet!C10`→`Assumptions!C7`→`Rates!B4`; rows inserted in both targets | 2 `ROW_ADDED`; **0 `FORMULA`, 0 `FORMULA_UNVERIFIED`**, total 2 |
 | 32 | Test 12's header mismatch plus `#REF!` at `C6` in B | 1 `TAB_SKIPPED` **and** 1 `REF_ERROR` with `aRef` `''`, `bRef` `C6`, total 2 |
-| 33 | Root error in `Assumptions`, inherited in `HVAC`, identical in both files, **`HVAC` listed first** | 2 `REF_ERROR`; first CSV data line is `Assumptions`, second `HVAC` |
+| 33 | Root error in `Assumptions`, inherited in `Fleet`, identical in both files, **`Fleet` listed first** | 2 `REF_ERROR`; first CSV data line is `Assumptions`, second `Fleet` |
 | 34 | Identical formulas, values 20 vs 24, non-volatile | 1 `DERIVED_VALUE`, total 1; `sectionOf` returns 2; `old`/`new` are `'20'`/`'24'` — the **values**, never the formula |
 | 35 | 40 recalculated cells + 1 `FORMULA` + 1 `REF_ERROR_NEW` | Marker at CSV line index 4; blank line above it, repeated header below; section 1 holds exactly 2 rows, error first; **zero `DERIVED_VALUE` above the marker**, all 40 below it, and nothing else in the file |
 | 36 | Test 34's fixture, `derivedSection: false` | 0 rows, and the CSV is **exactly** `CSV_HEADER` — no marker, no blank line, no second header |
@@ -1110,7 +1110,7 @@ Three rows deserve reading against their v1.0.0 numbers:
   here resolves the target once per formula and applies that map to every
   reference's row. Only two fixtures can tell the difference: a formula holding
   two references into two *different* tabs whose maps *disagree*. Test 25's
-  `=Rates!$B$4*$B$7` looks like a third, but `Rates` and `HVAC` happen to map
+  `=Rates!$B$4*$B$7` looks like a third, but `Rates` and `Fleet` happen to map
   row 7 the same way, so it passes under the mutation by coincidence. **Test 23
   and '4a' are the whole guard, and that is thinner than the v1.0.0 table
   claimed.** Worth a wider fixture the next time this area is touched.

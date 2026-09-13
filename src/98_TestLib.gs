@@ -85,7 +85,7 @@ function t_emptyFormulas(values) {
  * Multi-tab workbook fixture. Plan Step 1 requires this now rather than as a
  * Step 9 retrofit — tests 18 and 21-33 need at least three tabs each.
  *
- *   t_workbook({ Rates: t_fixture(...), HVAC: t_fixture(...) })
+ *   t_workbook({ Rates: t_fixture(...), Fleet: t_fixture(...) })
  *
  * Returns { tabs: {name: TabData}, names: [...] } with insertion order kept,
  * which is what pairTabs (Step 7) will consume.

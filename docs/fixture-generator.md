@@ -256,7 +256,7 @@ reference targets, then referrers. The dependency edges are:
 | `Rates` | `Assumptions`, `Rates Ref`, `Unverified`, `Volatile` |
 | `Escalation` | `Assumptions` |
 | `Edit Distance` | `Unverified` |
-| `Assumptions` | `HVAC` |
+| `Assumptions` | `Fleet` |
 | `Chain Root` | `Chain Leaf` |
 | `Lookup Table` | `Renamed Ref` |
 
@@ -498,7 +498,7 @@ symptom.
 
 ### 6.4 The tabs that must emit nothing
 
-`Rates Ref`, `Assumptions`, `HVAC`, `Self Ref`, `Renamed Ref`, `Row Insert Top`,
+`Rates Ref`, `Assumptions`, `Fleet`, `Self Ref`, `Renamed Ref`, `Row Insert Top`,
 `Row Insert Mid` must produce **zero `FORMULA` rows**. `Untouched`, `Ref Src A`
 and `_Manifest` must produce **zero rows of any kind, in either section**.
 
@@ -568,7 +568,7 @@ is what the deterministic first-three assertion checks.
 | `Edit Distance` | 13 | 20, 22 | row inserted at 2, then 6 of 12 data rows rewritten wholesale → skipped |
 | `Assumptions` | 16 | 23, 25, 26 | row inserted at 4 (chain middle shifts) |
 | `Chain Root` | 16 | 33 | none; `C7` is broken in both files |
-| `HVAC` | 15 | 26 | none; `F10` closes the chain |
+| `Fleet` | 15 | 26 | none; `F10` closes the chain |
 | `Rates Ref` | 16 | 18 | none; the isolated cross-tab reference |
 | `Unverified` | 16 | 22, 24 | `B5` gains `*2` |
 | `Volatile` | 16 | 27, 28 | none; values move because `Rates` did |
@@ -593,8 +593,8 @@ changed value, which is precisely `VOLATILE_VALUE`. Everything that references
 relocated to `$B$5` and reads 55 in both files, so those tabs stay silent in
 **both** sections. The contrast between the two is the fixture.
 
-**`Assumptions` → `HVAC`** is the chain. `Assumptions!C7` holds `=Rates!$B$4`;
-`HVAC!F10` holds `=Assumptions!$C$7`. A row is inserted in *both* `Rates` and
+**`Assumptions` → `Fleet`** is the chain. `Assumptions!C7` holds `=Rates!$B$4`;
+`Fleet!F10` holds `=Assumptions!$C$7`. A row is inserted in *both* `Rates` and
 `Assumptions`, so both hops shift. Each is resolved by its own target's map in
 one step. Test 26 is the one that validates the entire diff half at once.
 
@@ -625,7 +625,7 @@ is worse than one that produces none.
 | Symptom | Likely cause |
 |---|---|
 | `Volatile!B2` / `B3` appear in **section 2** as `DERIVED_VALUE` | `ctx.volatile` tested after `derivedSection` in diffCell rule 5. Nothing is dropped and no count looks wrong — the rows are merely mislabelled and buried. Rule 14, tests 27–28 |
-| `FORMULA` rows in `Rates Ref` / `Assumptions` / `HVAC` / `Self Ref` | Step 4 relocation is no-opping. The plan §4b regex does not match real `getFormulasR1C1()` output — go back to plan §1.2a |
+| `FORMULA` rows in `Rates Ref` / `Assumptions` / `Fleet` / `Self Ref` | Step 4 relocation is no-opping. The plan §4b regex does not match real `getFormulasR1C1()` output — go back to plan §1.2a |
 | `FORMULA` rows in `Renamed Ref` only | Sheet-name relocation (plan §4d) missing; row relocation is fine |
 | `FORMULA` rows in `Assumptions` but not `Rates Ref` | One map per formula instead of one per reference (the plan §4b callback). Test 23 |
 | `Unverified!B5` reports `FORMULA_UNVERIFIED` | `maskUnresolvable` is masking every absolute row, not only unmapped targets. Test 24 |

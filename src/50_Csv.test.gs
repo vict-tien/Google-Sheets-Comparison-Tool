@@ -38,9 +38,9 @@ function t_csv_tests() {
     // check would suppress the pair entirely.
     const mk = function () {
       return t_workbook({
-        // HVAC first, so workbook order alone would put the inherited row on
+        // Fleet first, so workbook order alone would put the inherited row on
         // top. Only the sort puts the root there.
-        HVAC: t_plant(16, [[9, 2, '=Assumptions!$C$7', '=Assumptions!R7C3',
+        Fleet: t_plant(16, [[9, 2, '=Assumptions!$C$7', '=Assumptions!R7C3',
                             '#REF!']]),
         Assumptions: t_plant(16, [[6, 2, '=Rates!#REF!', '=Rates!#REF!',
                                    '#REF!']])
@@ -62,7 +62,7 @@ function t_csv_tests() {
                 'root first: ' + lines[1]);
     t_assertEqual(lines[1].indexOf("'=Rates!#REF!") > 0, true,
                 'a root row carries a formula: ' + lines[1]);
-    t_assertEqual(lines[2].indexOf('HVAC,REF_ERROR') === 0, true,
+    t_assertEqual(lines[2].indexOf('Fleet,REF_ERROR') === 0, true,
                 'inherited second: ' + lines[2]);
   });
 

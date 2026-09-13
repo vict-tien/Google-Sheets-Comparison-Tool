@@ -349,7 +349,7 @@ function mutateWorkbookB_(ss) {
   col.getRange('E1').setValue('Extra column');
   col.getRange(2, 5, 8, 1).setValues([['e1'], ['e2'], ['e3'], ['e4'], ['e5'], ['e6'], ['e7'], ['e8']]);
 
-  // 'Untouched', 'Rates Ref', 'HVAC', 'Chain Root', 'Chain Leaf', 'Volatile',
+  // 'Untouched', 'Rates Ref', 'Fleet', 'Chain Root', 'Chain Leaf', 'Volatile',
   // 'Ref Src A' and '_Manifest' receive NO direct mutation. Their expected
   // output is produced entirely by relocation and error propagation.
 }
@@ -398,11 +398,11 @@ function tabSpecs_() {
     escalationTab_(),
     lookupTableTab_(),
     editDistanceTab_(),   // targets Unverified; also references Ref Src A
-    assumptionsTab_(),    // references Rates + Escalation; targeted by HVAC
+    assumptionsTab_(),    // references Rates + Escalation; targeted by Fleet
     chainRootTab_(),      // references Ref Src A; targeted by Chain Leaf
 
     // Referrers.
-    hvacTab_(),
+    fleetTab_(),
     ratesRefTab_(),
     unverifiedTab_(),
     volatileTab_(),
@@ -451,7 +451,7 @@ const TEST_INDEX = [
   ['23', 'Assumptions C11', '=Rates!$B$4*Escalation!$C$7, rows added in BOTH', '0 FORMULA rows (one-map-per-formula fails)'],
   ['24', 'Unverified B5', 'half-verifiable formula genuinely edited (*2)', 'FORMULA, not FORMULA_UNVERIFIED'],
   ['25', 'Assumptions C12', '=Rates!$B$4*$D$7 cross-tab + same-tab absolute', '0 FORMULA rows'],
-  ['26', 'Assumptions C8 -> HVAC F10', 'chain; rows inserted in Rates AND Assumptions', '2 ROW_ADDED, 0 FORMULA in either referencer'],
+  ['26', 'Assumptions C8 -> Fleet F10', 'chain; rows inserted in Rates AND Assumptions', '2 ROW_ADDED, 0 FORMULA in either referencer'],
   ['27', 'Volatile B2', '=INDIRECT("Rates!B"&A2), text identical, value moved', '1 VOLATILE_VALUE in SECTION 1, 0 FORMULA, 0 DERIVED_VALUE'],
   ['28', 'Volatile B3', '=OFFSET(Rates!$A$1,3,1), anchor relocates cleanly', '1 VOLATILE_VALUE in SECTION 1 -- NOT DERIVED_VALUE (rule 14)'],
   ['29', 'Ref Errors B4', 'clean in A, broken in B', '1 REF_ERROR_NEW; new shows the broken formula'],
@@ -640,7 +640,7 @@ function escalationTab_() {
 }
 
 function assumptionsTab_() {
-  // C7 is the middle link of the chain HVAC -> Assumptions -> Rates.
+  // C7 is the middle link of the chain Fleet -> Assumptions -> Rates.
   // D7 is the same-tab absolute target for test 25.
   const grid = [
     ['Key', 'Description', 'Value', 'Alt'],
@@ -663,17 +663,17 @@ function assumptionsTab_() {
   return { name: 'Assumptions', grid: grid };
 }
 
-function hvacTab_() {
+function fleetTab_() {
   // F10 closes the chain. Both Rates and Assumptions gain a row in B, and this
   // formula must still come back clean — single-hop relocation, no graph.
-  const grid = [['Zone', 'Area', 'Load', 'Unit cost', 'Subtotal', 'Rate from chain']];
+  const grid = [['Vehicle', 'Mileage', 'Fuel', 'Unit cost', 'Subtotal', 'Rate from chain']];
   for (let i = 0; i < 14; i++) {
     const r = i + 2;
-    grid.push(['Zone ' + (i + 1), 500 + i * 25, 12 + i, 3.5 + i * 0.1,
+    grid.push(['Vehicle ' + (i + 1), 500 + i * 25, 12 + i, 3.5 + i * 0.1,
                '=B' + r + '*D' + r,
                r === 10 ? "=Assumptions!$C$7" : '']);
   }
-  return { name: 'HVAC', grid: grid };
+  return { name: 'Fleet', grid: grid };
 }
 
 function ratesRefTab_() {
@@ -1000,7 +1000,7 @@ function logResult_(folder, ssA, ssB) {
     '  ZERO DERIVED_VALUE rows may appear above that marker (rule 13, test 35).',
     '',
     '--- Must produce NOTHING --------------------------------------------',
-    '  ZERO formula rows in: Rates Ref, Assumptions, HVAC, Self Ref,',
+    '  ZERO formula rows in: Rates Ref, Assumptions, Fleet, Self Ref,',
     '                        Renamed Ref, Row Insert Top, Row Insert Mid',
     '  ZERO rows of any kind: Untouched, Ref Src A, _Manifest',
     '  NO noise warning on Cascade. NO TAB_SKIPPED on Cascade.',

@@ -118,13 +118,13 @@ const pair = vm.runInContext(`
 (function () {
   const A = t_workbook({
     Assumptions: t_plantG(t_filler(18), [[4, 2, '=B5*2', '=RC[-1]*2', 100]]),
-    'HVAC Capex': t_plant(16, [[9, 2, '=Rates!$B$4', '=Rates!R4C2', 40]]),
+    'Fleet Capex': t_plant(16, [[9, 2, '=Rates!$B$4', '=Rates!R4C2', 40]]),
     Rates: t_sheet(t_filler(16)),
     Scratch: t_sheet(t_filler(16))
   });
   const B = t_workbook({
     Assumptions: t_plantG(t_filler(18), [[4, 2, '=B5*2', '=RC[-1]*2', 200]]),
-    'HVAC Capex': t_plant(16, [[9, 2, '=Rates!$B$5', '=Rates!R5C2', 40]]),
+    'Fleet Capex': t_plant(16, [[9, 2, '=Rates!$B$5', '=Rates!R5C2', 40]]),
     Rates: t_inserted(16, 2),
     Ledger: t_plant(16, [[3, 1, '=Old!#REF!', '=Old!#REF!', '#REF!']])
   });

@@ -173,11 +173,11 @@ function t_main_tests() {
     // tab was skipped", so it has to name the REFERENCED tab, not the one
     // holding the formula.
     const A = t_workbook({
-      HVAC:  t_plant(16, [[9, 2, '=Rates!$B$4', '=Rates!R4C2', 40]]),
+      Fleet:  t_plant(16, [[9, 2, '=Rates!$B$4', '=Rates!R4C2', 40]]),
       Rates: t_sheet(t_filler(20))
     });
     const B = t_workbook({
-      HVAC:  t_plant(16, [[9, 2, '=Rates!$B$5', '=Rates!R5C2', 40]]),
+      Fleet:  t_plant(16, [[9, 2, '=Rates!$B$5', '=Rates!R5C2', 40]]),
       Rates: t_unalignable()
     });
     const s = buildSummary({ result: t_cmp(A, B) });

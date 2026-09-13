@@ -57,13 +57,13 @@ function t_relocate_tests() {
     // two references resolve to different tabs and need different maps in a
     // single pass.
     const A = t_workbook({
-      HVAC: t_plant(16, [[9, 2, '=Rates!$B$4*Escalation!$C$7',
+      Fleet: t_plant(16, [[9, 2, '=Rates!$B$4*Escalation!$C$7',
                                '=Rates!R4C2*Escalation!R7C3', 40]]),
       Rates: t_sheet(t_filler(16)),
       Escalation: t_sheet(t_filler(16))
     });
     const B = t_workbook({
-      HVAC: t_plant(16, [[9, 2, '=Rates!$B$5*Escalation!$C$8',
+      Fleet: t_plant(16, [[9, 2, '=Rates!$B$5*Escalation!$C$8',
                                '=Rates!R5C2*Escalation!R8C3', 40]]),
       Rates: t_inserted(16, 2),        // above row 4  -> 4 maps to 5
       Escalation: t_inserted(16, 5)    // above row 7  -> 7 maps to 8
@@ -88,13 +88,13 @@ function t_relocate_tests() {
     // "+1", say) survives masking and would let a mask-everything
     // implementation pass this test while still losing real repointings.
     const A = t_workbook({
-      HVAC: t_plant(16, [[9, 2, '=Rates!$B$4*Escalation!$C$7',
+      Fleet: t_plant(16, [[9, 2, '=Rates!$B$4*Escalation!$C$7',
                                '=Rates!R4C2*Escalation!R7C3', 40]]),
       Rates: t_sheet(t_filler(16)),
       Escalation: t_sheet(t_filler(20))
     });
     const B = t_workbook({
-      HVAC: t_plant(16, [[9, 2, '=Rates!$B$9*Escalation!$C$7',
+      Fleet: t_plant(16, [[9, 2, '=Rates!$B$9*Escalation!$C$7',
                                '=Rates!R9C2*Escalation!R7C3', 90]]),
       Rates: t_inserted(16, 2),
       Escalation: t_unalignable()
@@ -111,13 +111,13 @@ function t_relocate_tests() {
                'inserted in both -> 0 FORMULA',
     function () {
     const A = t_workbook({
-      HVAC: t_plant(16, [[9, 2, '=Rates!$B$4*$B$7', '=Rates!R4C2*R7C2', 40]]),
+      Fleet: t_plant(16, [[9, 2, '=Rates!$B$4*$B$7', '=Rates!R4C2*R7C2', 40]]),
       Rates: t_sheet(t_filler(16))
     });
     const B = t_workbook({
-      // A row inserted in HVAC itself: the same-tab R7C2 resolves through
-      // HVAC's own map, and the referencing cell has moved down one row too.
-      HVAC: t_inserted(16, 5, [[10, 2, '=Rates!$B$5*$B$8',
+      // A row inserted in Fleet itself: the same-tab R7C2 resolves through
+      // Fleet's own map, and the referencing cell has moved down one row too.
+      Fleet: t_inserted(16, 5, [[10, 2, '=Rates!$B$5*$B$8',
                                       '=Rates!R5C2*R8C2', 40]]),
       Rates: t_inserted(16, 2)
     });
@@ -142,8 +142,8 @@ function t_relocate_tests() {
       return t_plant(16, [[9, 2, '=INDIRECT("Rates!B" & A10)',
                                  '=INDIRECT("Rates!B" & RC[-1])', v]]);
     };
-    const A = t_workbook({ HVAC: mk(55), Rates: t_sheet(t_filler(16)) });
-    const B = t_workbook({ HVAC: mk(77), Rates: t_inserted(16, 2) });
+    const A = t_workbook({ Fleet: mk(55), Rates: t_sheet(t_filler(16)) });
+    const B = t_workbook({ Fleet: mk(77), Rates: t_inserted(16, 2) });
     const changes = t_cmp(A, B).changes;
     t_assertCount(changes, 'VOLATILE_VALUE', 1);
     t_assertCount(changes, 'DERIVED_VALUE', 0);
@@ -160,10 +160,10 @@ function t_relocate_tests() {
       return t_plant(16, [[9, 2, '=OFFSET(Rates!$A$1,3,1)',
                                  '=OFFSET(Rates!R1C1,3,1)', v]]);
     };
-    const A = t_workbook({ HVAC: mk(30), Rates: t_sheet(t_filler(16)) });
+    const A = t_workbook({ Fleet: mk(30), Rates: t_sheet(t_filler(16)) });
     // Inserted BELOW row 1, so the anchor maps to itself and the formula text
     // stays identical - the numeric offset is what silently moved.
-    const B = t_workbook({ HVAC: mk(40), Rates: t_inserted(16, 5) });
+    const B = t_workbook({ Fleet: mk(40), Rates: t_inserted(16, 5) });
     const changes = t_cmp(A, B).changes;
     t_assertCount(changes, 'VOLATILE_VALUE', 1);
     t_assertCount(changes, 'DERIVED_VALUE', 0);
@@ -269,23 +269,23 @@ function t_relocate_tests() {
     // Rates has a map, Escalation does not. maskUnresolvable would mask one
     // and leave the other; this must name exactly the one it masked.
     const tables = { tabMap: {}, rowMaps: { Rates: new Map([[4, 5]]) } };
-    t_assertEqual(unresolvableTargets('=Rates!R4C2 * Escalation!R7C3', tables, 'HVAC'),
+    t_assertEqual(unresolvableTargets('=Rates!R4C2 * Escalation!R7C3', tables, 'Fleet'),
                 ['Escalation'], 'only the unmapped target');
-    t_assertEqual(unresolvableTargets('=Rates!R4C2', tables, 'HVAC'),
+    t_assertEqual(unresolvableTargets('=Rates!R4C2', tables, 'Fleet'),
                 [], 'a mapped target is not unresolvable');
     // A same-tab absolute reference resolves to currentTab, which here has no
     // map either — the caller's own tab is a legitimate answer.
-    t_assertEqual(unresolvableTargets('=R7C3', tables, 'HVAC'),
-                ['HVAC'], 'same-tab absolute resolves to currentTab');
+    t_assertEqual(unresolvableTargets('=R7C3', tables, 'Fleet'),
+                ['Fleet'], 'same-tab absolute resolves to currentTab');
     // Relative rows are shift-invariant, so nothing about them is unverifiable.
-    t_assertEqual(unresolvableTargets('=Escalation!R[-1]C3', tables, 'HVAC'),
+    t_assertEqual(unresolvableTargets('=Escalation!R[-1]C3', tables, 'Fleet'),
                 [], 'a relative row is never unresolvable');
     // De-duplicated, not once per reference.
     t_assertEqual(unresolvableTargets('=Escalation!R7C3 + Escalation!R9C3',
-                                    tables, 'HVAC'),
+                                    tables, 'Fleet'),
                 ['Escalation'], 'de-duplicated');
     // A string literal holding the text of a reference is protected (§4a).
-    t_assertEqual(unresolvableTargets('=INDIRECT("Escalation!R7C3")', tables, 'HVAC'),
+    t_assertEqual(unresolvableTargets('=INDIRECT("Escalation!R7C3")', tables, 'Fleet'),
                 [], 'string literals are not scanned');
   });
 
@@ -302,21 +302,21 @@ function t_relocate_tests() {
     // nobody authored.
     const tables = { tabMap: { Rates: 'Rates' },
                      rowMaps: { Rates: new Map([[4, 5]]) } };
-    t_assertEqual(relocate('=SUM(Rates!R4)', tables, 'HVAC'), '=SUM(Rates!R5)',
+    t_assertEqual(relocate('=SUM(Rates!R4)', tables, 'Fleet'), '=SUM(Rates!R5)',
                 'the absolute row moves');
     // Each endpoint resolves independently, and R6 - which has no sheet prefix -
     // resolves to the CURRENT tab, which has no map, so it is left alone.
-    t_assertEqual(relocate('=SUM(Rates!R4:R6)', tables, 'HVAC'),
+    t_assertEqual(relocate('=SUM(Rates!R4:R6)', tables, 'Fleet'),
                 '=SUM(Rates!R5:R6)', 'per-match resolution still holds');
     t_assertEqual(
-      relocate('=R4', { tabMap: {}, rowMaps: { HVAC: new Map([[4, 9]]) } }, 'HVAC'),
+      relocate('=R4', { tabMap: {}, rowMaps: { Fleet: new Map([[4, 9]]) } }, 'Fleet'),
       '=R9', 'same-tab whole row, and no C is invented');
 
     // Unverifiable exactly as an R4C2 would be, and masked the same way.
     const noMap = { tabMap: {}, rowMaps: {} };
-    t_assertEqual(maskUnresolvable('=SUM(Rates!R4)', noMap, 'HVAC'),
+    t_assertEqual(maskUnresolvable('=SUM(Rates!R4)', noMap, 'Fleet'),
                 '=SUM(Rates!R#)', 'masked, and still a whole row');
-    t_assertEqual(unresolvableTargets('=SUM(Rates!R4)', noMap, 'HVAC'),
+    t_assertEqual(unresolvableTargets('=SUM(Rates!R4)', noMap, 'Fleet'),
                 ['Rates'], 'and the tab is named');
 
     // The Step 10 relocation warning is gated on absRefs, so its regex has to
@@ -336,18 +336,18 @@ function t_relocate_tests() {
     // every whole-column reference in the workbook.
     const tables = { tabMap: { Rates: 'Rates 2026' },
                      rowMaps: { Rates: new Map([[4, 5]]) } };
-    t_assertEqual(relocate('=SUM(Rates!C2)', tables, 'HVAC'),
+    t_assertEqual(relocate('=SUM(Rates!C2)', tables, 'Fleet'),
                 "=SUM('Rates 2026'!C2)",
                 'renamed, requoted because it now needs quoting, column untouched');
-    t_assertEqual(relocate('=SUM(C2)', tables, 'HVAC'), '=SUM(C2)',
+    t_assertEqual(relocate('=SUM(C2)', tables, 'Fleet'), '=SUM(C2)',
                 'no sheet prefix is invented where none was written');
 
     // Nothing about a column is unverifiable: there is no row that could fail
     // to map. Masking one would make a real edit indistinguishable from noise.
     const noMap = { tabMap: {}, rowMaps: {} };
-    t_assertEqual(maskUnresolvable('=SUM(Rates!C2)', noMap, 'HVAC'),
+    t_assertEqual(maskUnresolvable('=SUM(Rates!C2)', noMap, 'Fleet'),
                 '=SUM(Rates!C2)', 'a column is never masked');
-    t_assertEqual(unresolvableTargets('=SUM(Rates!C2)', noMap, 'HVAC'), [],
+    t_assertEqual(unresolvableTargets('=SUM(Rates!C2)', noMap, 'Fleet'), [],
                 'and never named as unresolvable');
   });
 

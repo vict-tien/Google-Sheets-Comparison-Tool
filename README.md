@@ -32,7 +32,7 @@ This tool makes that distinction the organising principle of its output:
   more numerous, and kept out of section 1 so it cannot bury the diff.
 
 It also tries hard to produce *no row at all* where nothing meaningful happened.
-If a row was inserted in `Rates` and a formula in `HVAC Capex` consequently reads
+If a row was inserted in `Rates` and a formula in `Fleet Capex` consequently reads
 `=Rates!$B$5` where it used to read `=Rates!$B$4`, that formula is **not** a
 change — the tool relocates references through the row alignment and stays quiet.
 That silence is the feature. Where it *can't* resolve a reference (because the
@@ -51,7 +51,7 @@ B: 2026 Cost Model v4    (6 tabs)
 TAB                   STATUS        REF   VAL   FORM   UNVER   VOL   HARD   FMLZD   ±ROW   ±COL  │   DERIV
 ─────────────────────────────────────────────────────────────────────────────────────────────────┼────────
 Assumptions           modified        0     0      0       0     0      0       0     +1      0  │       6
-HVAC Capex            modified        1     0      0       1     1      0       0      0      0  │       0
+Fleet Capex           modified        1     0      0       1     1      0       0      0      0  │       0
 Escalation            SKIPPED         0     —      —       —     —      —       —      —      —  │       —
 Cover → C o v e r     renamed         0     0      0       0     0      0       0      0      0  │       0
 Ledger                added           1     —      —       —     —      —       —      —      —  │       —
@@ -66,10 +66,10 @@ and writes a two-section CSV to Drive:
 
 ```
 tab,change,a_ref,b_ref,column,old,new
-HVAC Capex,REF_ERROR,C14,C14,C,'=Rates!#REF!,'=Rates!#REF!
+Fleet Capex,REF_ERROR,C14,C14,C,'=Rates!#REF!,'=Rates!#REF!
 Cover,TAB_RENAMED,,,,Cover,C o v e r
 Assumptions,ROW_ADDED,,A15,,,Inserted|999|
-HVAC Capex,FORMULA_UNVERIFIED,C10,C10,C,'=Escalation!$B$4,'=Escalation!$B$5
+Fleet Capex,FORMULA_UNVERIFIED,C10,C10,C,'=Escalation!$B$4,'=Escalation!$B$5
 Escalation,TAB_SKIPPED,,,,,edit distance 45% — structure differs
 
 # SECTION 2 — DERIVED VALUES: cells whose formula is identical in both files and whose value changed

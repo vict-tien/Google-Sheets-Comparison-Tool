@@ -168,7 +168,7 @@ function run() {
  *
  * The two-phase ordering — every tab aligned before any tab is compared — lives
  * inside compareWorkbooks and is NOT re-implemented here. That is load-bearing:
- * relocating Rates!R4C2 inside the HVAC tab needs the Rates row map, and a
+ * relocating Rates!R4C2 inside the Fleet tab needs the Rates row map, and a
  * single-pass loop that reads, aligns and compares one tab at a time cannot have
  * it. The symptom is false FORMULA rows across every referencing tab, plausible
  * enough to be believed. Tests 18, 22 and 26 hold that ordering.

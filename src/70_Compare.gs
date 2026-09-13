@@ -12,10 +12,10 @@
  * alternative costs four tests their subject.
  *
  * PHASE 1 ALIGNS EVERY PAIRED TAB BEFORE PHASE 2 COMPARES ANY TAB. This is
- * load-bearing, not tidiness: relocating Rates!R4C2 inside the HVAC tab needs
+ * load-bearing, not tidiness: relocating Rates!R4C2 inside the Fleet tab needs
  * the Rates row map, and a single-pass loop that aligns and compares one tab at
  * a time cannot have it. The symptom is false FORMULA rows across every
- * referencing tab — plausible enough to be believed. Test 18 lists HVAC BEFORE
+ * referencing tab — plausible enough to be believed. Test 18 lists Fleet BEFORE
  * Rates for exactly this reason. The mutation "single-pass" fails tests 18, 23,
  * 24, 25, 26 and '5e'.
  *

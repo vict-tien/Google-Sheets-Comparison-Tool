@@ -37,11 +37,11 @@ function t_pair_tests() {
     // sheet name relocated through tabMap so a rename does not fire on every
     // referencing cell.
     const A = t_workbook({
-      HVAC: t_plant(16, [[9, 2, "='Q1 Rates'!$B$4", "='Q1 Rates'!R4C2", 40]]),
+      Fleet: t_plant(16, [[9, 2, "='Q1 Rates'!$B$4", "='Q1 Rates'!R4C2", 40]]),
       'Q1 Rates': t_sheet(t_filler(16))
     });
     const B = t_workbook({
-      HVAC: t_plant(16, [[9, 2, '=Q1_Rates!$B$4', '=Q1_Rates!R4C2', 40]]),
+      Fleet: t_plant(16, [[9, 2, '=Q1_Rates!$B$4', '=Q1_Rates!R4C2', 40]]),
       'Q1_Rates': t_sheet(t_filler(16))
     });
     const changes = t_cmp(A, B).changes;
