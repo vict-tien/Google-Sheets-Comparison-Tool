@@ -8,7 +8,7 @@ Written in Google Apps Script (V8), no external libraries, no build step.
 Read-only with respect to both source files, enforced by OAuth scope rather than
 by convention.
 
-> **Status: v1.1.0, not yet run against a live spreadsheet.** All 79 tests pass
+> **Status: v1.1.0.** All 79 tests pass
 > against in-memory fixtures and a stubbed Google API, but the end-to-end run
 > against two real files has not been performed, and one assumption about the
 > Sheets API (`getFormulasR1C1()`'s exact output) is unverified. See
